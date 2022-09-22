@@ -1,0 +1,51 @@
+.chat-message .cheater-detected {
+	text-align: center;
+	font-weight: bold;
+	text-decoration: underline;
+	font-size: larger;
+	border-bottom: 3px solid black;
+}
+
+
+.chat-message.cheater-detected {
+	background-color: red !important;
+	background-image: none !important;
+}
+
+.chat-message .roll-verified {
+	text-align: center;
+	font-size: smaller;
+	border-bottom: 2px solid black;
+}
+
+.chat-message.player-sus {
+	background-color: yellow !important;
+	background-image: none !important;
+
+}
+
+.chat-message .player-sus {
+	text-align: center;
+	border-bottom: 2px solid black;
+	text-decoration: underline;
+	font-size: larger;
+}
+
+.roll-log {
+	border: 1px solid black;
+	text-align: center;
+	margin-left:auto;
+	margin-right:auto;
+	user-select: all;
+}
+
+.roll-log td {
+	border: 1px solid black;
+	user-select: all;
+}
+
+
+div.roll-log {
+	width: 680px;
+	height: 700px;
+}
