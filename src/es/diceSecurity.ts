@@ -126,15 +126,12 @@ export class DiceSecurity {
 	static async sendDiagnostic({gm_id, rollId} : {gm_id: string, rollId: number}) {
 		let diagnostics : ArbitraryObject = {};
 		for ( const x of Object.getOwnPropertyNames(Roll.prototype)) {
-			let rollProto: ArbitraryObject;
-			try {
-				//@ts-ignore
-				rollProto  = Roll.prototype[x] as ArbitraryObject;
-				if (rollProto == undefined)
-					continue;
-			} catch(e) {continue;}
-			if (typeof rollProto == 'function') {
-				diagnostics[x] = rollProto.toString();
+			const prop = (Roll.prototype as ArbitraryObject)?.x;
+			const propType = typeof prop;
+			if (propType == 'undefined')
+				continue;
+			if (propType == 'function') {
+				diagnostics[x] = prop.toString();
 			}
 		}
 		this.socketSend({
