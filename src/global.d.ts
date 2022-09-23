@@ -14,6 +14,10 @@ interface Actor {
 	system: ArbitraryObject;
 }
 
+interface ChatMessage {
+	roll: RollType;
+}
+
 interface RollSendData {
 	gm_id?: string;
 	rollString?: string;
@@ -23,7 +27,7 @@ interface RollSendData {
 	command:  ValueOf<ValidCommandCodes>;
 	target: string;
 	infraction ?: string;
-	rollId ?: string;
+	rollId ?: number;
 	dice?: string;
 	player_timestamp ?: number;
 	diagnostics ?: any;

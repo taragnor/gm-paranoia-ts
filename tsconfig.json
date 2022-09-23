@@ -10,7 +10,10 @@
     "outDir": "dist",
     "rootDir": "src",
 
-	 "allowJs": true,
+	 "noImplicitAny": true,
+	 "alwaysStrict": true,
+	 "noImplicitOverride": true,
+	 "allowJs": false,
 	 "strictNullChecks": true,
 	 "esModuleInterop": true,
 	 "skipLibCheck": true,

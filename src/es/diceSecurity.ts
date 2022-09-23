@@ -54,7 +54,7 @@ export class DiceSecurity {
 		});
 	}
 
-	static dispatchCheaterMsg(player_id : string, infraction: string, rollId: string) {
+	static dispatchCheaterMsg(player_id : string, infraction: string, rollId: number) {
 		this.socketSend( {
 			command: this.codes.PUNISH_MONGREL,
 			target: player_id,
@@ -88,7 +88,7 @@ export class DiceSecurity {
 	static async rollRecieve({dice: rollData, player_timestamp, player_id, timestamp: gm_timestamp, log_id}: RollSendData) {
 		try {
 			const game = getGame();
-			const roll = Roll.fromJSON(rollData!);
+			const roll = Roll.fromJSON(rollData!) as RollType;
 			if (!roll["security"]) {
 				console.log(rollData);
 				console.warn("No security Data");
@@ -122,15 +122,18 @@ export class DiceSecurity {
 		} else throw new Error ("No awaited roll somehow?");
 	}
 
-	static async sendDiagnostic({gm_id, rollId}) {
-		let diagnostics = {};
+	static async sendDiagnostic({gm_id, rollId} : {gm_id: string, rollId: number}) {
+		let diagnostics : ArbitraryObject = {};
 		for ( const x of Object.getOwnPropertyNames(Roll.prototype)) {
+			let rollProto: any;
 			try {
-			if (Roll.prototype[x] == undefined)
-				continue;
+				//@ts-ignore
+				rollProto  = Roll.prototype[x] as any;
+				if (rollProto == undefined)
+					continue;
 			} catch(e) {continue;}
-			if (typeof Roll?.prototype[x] == 'function') {
-				diagnostics[x] = Roll.prototype[x].toString();
+			if (typeof rollProto == 'function') {
+				diagnostics[x] = rollProto.toString();
 			}
 		}
 		this.socketSend({
@@ -206,11 +209,11 @@ export class DiceSecurity {
 		switch (infraction) {
 			case "cheater":
 				// console.log("CHEATING MONGREL DETECTED");
-				await this.sendDiagnostic({gm_id: GMId, rollId});
+				await this.sendDiagnostic({gm_id: GMId, rollId: rollId!});
 				break;
 			case "sus":
 				// console.log("YOU ARE SUS");
-				await this.sendDiagnostic({gm_id: GMId, rollId});
+				await this.sendDiagnostic({gm_id: GMId, rollId: rollId!});
 				break;
 		}
 	}
@@ -220,13 +223,17 @@ export class DiceSecurity {
 		console.log("*** Diagnostic Recieved from suspected Cheater ***");
 		let violations = new Array();
 		for (const x in diagnostics) {
+			//@ts-ignore
 			if (diagnostics[x] != Roll.prototype[x]?.toString()) {
 				console.warn(`Tampered function found in class Roll, function "${x}":\n ${diagnostics[x]}`);
 				violations.push(`${x}:${diagnostics[x]}`);
 			}
 		}
 		if (violations.length > 0) {
-			const logs = game.messages!.filter(x=> x?.roll?.options["_securityId"] == rollId);
+			const logs = game.messages!.filter(x=> {
+				const roll : RollType = x.roll! as RollType;
+				return roll.options._securityId == rollId;
+			});
 			for (let log of logs) {
 				await this.updateLogFullCheat(log);
 			}
@@ -422,7 +429,7 @@ export class DiceSecurity {
 		const insert_target = html.find(".message-header");
 		html.addClass("player-sus");
 		$(`<div class="player-sus security-msg"> ${chatmessage.user!.name} is Sus (${reason}) </div>`).insertBefore(insert_target);
-		const rollId= chatmessage.roll!.options["_securityId"];
+		const rollId= chatmessage.roll!.options._securityId;
 		this.dispatchCheaterMsg(chatmessage.user!.id!, "sus", rollId );
 	}
 
