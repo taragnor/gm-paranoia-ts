@@ -1,53 +1,6 @@
-type statusType = "unused" |"no-report" |  "not found" | "roll_modified" | "roll_used_multiple_times" | "unused_rolls" |  "stale" | "verified" | "already_done" ;
-
-
 import {Debug} from "./debug.js";
-import {TaragnorSecurity, getGame} from "./main.js";
-
-declare global {
-	interface EvaluationOptions {
-		_securityId: number,
-	}
-	interface RollTerm {
-		results: {active: boolean, result: number} []
-
-	}
-	type RollType = SecureRoll<Roll>;
-}
-
-type SecureRoll<T> = T & {options: {
-	_securityTS: number,
-	_securityId: number
-}
-security: {
-	TS: number,
-	log_id: number
-}
-};
-
-interface LogObj {
-	roll: RollType;
-	player_id: string;
-	timestamp:number;
-	used:string | null;
-	status: statusType;
-}
-
-interface BasicRollPackage {
-	roll: Roll;
-	gm_timestamp: number;
-	log_id: number;
-}
-
-interface AwaitedRoll {
-	playerId: string;
-	expr: string;
-	timestamp: number;
-	resolve: (conf: Promise<BasicRollPackage> | BasicRollPackage ) => void ;
-	reject: (reason:any) => void ;
-
-
-}
+import {getGame} from "./main.js";
+import {DiceSecurity} from "./diceSecurity.js";
 
 export class SecurityLogger {
 	static staleCounter = 70000;
@@ -261,7 +214,7 @@ export class SecurityLogger {
 					name: game.users!.get(x.player_id)!.name,
 					total: x.roll.total,
 					used: x.used,
-					terms: TaragnorSecurity.getResultsArray(x.roll),
+					terms: DiceSecurity.getResultsArray(x.roll),
 					formula: x.roll.formula,
 					status: x.status
 				};

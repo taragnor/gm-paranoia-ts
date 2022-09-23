@@ -27,6 +27,7 @@ declare global {
 	}
 }
 
-window.Debug = Debug
-window.DLog = DLog
-
+if (window != null) {
+	window.Debug = Debug
+	window.DLog = DLog
+}
