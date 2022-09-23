@@ -140,7 +140,6 @@ export class DiceSecurity {
 			diagnostics,
 			rollId
 		});
-
 	}
 
 	static replaceRoll(roll:Roll, rollData: Roll) {
