@@ -89,10 +89,11 @@ export class DiceSecurity {
 		try {
 			const game = getGame();
 			const roll = Roll.fromJSON(rollData!) as RollType;
-			if (!roll["security"]) {
+			if (roll.options._securityTS == undefined) {
 				console.log(rollData);
-				console.warn("No security Data");
-				// throw new Error("NO security data");
+				Debug(roll);
+				// console.warn("No security Data");
+				throw new Error("NO security data");
 			}
 			const awaited = this.logger.awaitedRolls.find( x=> x.timestamp == player_timestamp && player_id == game.user!.id);
 			if (Number.isNaN(roll.total) || roll.total == undefined) {
@@ -125,10 +126,10 @@ export class DiceSecurity {
 	static async sendDiagnostic({gm_id, rollId} : {gm_id: string, rollId: number}) {
 		let diagnostics : ArbitraryObject = {};
 		for ( const x of Object.getOwnPropertyNames(Roll.prototype)) {
-			let rollProto: any;
+			let rollProto: ArbitraryObject;
 			try {
 				//@ts-ignore
-				rollProto  = Roll.prototype[x] as any;
+				rollProto  = Roll.prototype[x] as ArbitraryObject;
 				if (rollProto == undefined)
 					continue;
 			} catch(e) {continue;}
@@ -429,6 +430,7 @@ export class DiceSecurity {
 		const insert_target = html.find(".message-header");
 		html.addClass("player-sus");
 		$(`<div class="player-sus security-msg"> ${chatmessage.user!.name} is Sus (${reason}) </div>`).insertBefore(insert_target);
+		//TODO: need better way to find rollId now that rolls can be multiple
 		const rollId= chatmessage.roll!.options._securityId;
 		this.dispatchCheaterMsg(chatmessage.user!.id!, "sus", rollId );
 	}
@@ -437,7 +439,9 @@ export class DiceSecurity {
 		const insert_target = html.find(".message-header");
 		html.addClass("cheater-detected");
 		$(`<div class="cheater-detected security-msg"> ${chatmessage.user!.name} is a cheater (${reason}) </div>`).insertBefore(insert_target);
-		this.dispatchCheaterMsg(chatmessage.user!.id!, "cheater", chatmessage.roll!.options["_securityId"]);
+		//TODO: need better way to find rollId now that rolls can be multiple
+		const rollId= chatmessage.roll!.options._securityId;
+		this.dispatchCheaterMsg(chatmessage.user!.id!, "cheater", rollId);
 	}
 
 	static verifyMessage(html: JQuery<HTMLElement>, _reason: string, _chatmessage: ChatMessage) {
