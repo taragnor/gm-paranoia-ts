@@ -336,17 +336,19 @@ export class TaragnorSecurity {
 		});
 	}
 
+
 	static replaceRollProtoFunctions() {
 		//Replaces the original evaluate function with new Roller
 		//@ts-ignore
-		Roll.prototype._oldeval = Roll.prototype._evaluate;
+		const oldEval = Roll.prototype._evaluate;
+		// Roll.prototype._oldeval = Roll.prototype._evaluate;
 
 		//@ts-ignore
 		Roll.prototype._evaluate = async function (options ={}) {
 			const game = getGame();
 			if (game.user!.isGM) {
 				try {
-					return this._oldeval(options);
+					return oldEval.call(this, options);
 				} catch (e) {
 					Debug(this);
 					throw e;
@@ -425,7 +427,7 @@ export class TaragnorSecurity {
 				this.susMessage(html, "Roll used twice", chatmessage);
 				break;
 			case "no-roll": //currently not used
-				this.cheaterMessage(html, "No Roll", chatmessage);
+				// this.cheaterMessage(html, "No Roll", chatmessage);
 				break;
 			default:
 				this.susMessage(html, `unusual error ${verified}`, chatmessage);
@@ -458,7 +460,7 @@ export class TaragnorSecurity {
 	}
 
 	static startTextAnimation (html: JQuery<HTMLElement>) {
-		//NOTE PROB BEST TO REPLACE THIS WITH CUSTOM GM MESSAGE FOR VERIFICATION TO PREVENT FORGERY
+		//NOTE: PROB BEST TO REPLACE THIS WITH CUSTOM GM MESSAGE FOR VERIFICATION TO PREVENT FORGERY
 		const sleep = function(time: number)  {
 			return new Promise ( (resolve, _reject) => {
 				setTimeout(resolve, time);
@@ -477,7 +479,8 @@ export class TaragnorSecurity {
 
 	static async _displayRoll(roll : Roll) {
 		//DEBUG FUNCTION
-		console.log(`original terms: ${roll.terms.map( x=> x.results.map(y=> y.result))}`);
+		const map = roll.terms.map( x=> x.results.map(y=> y.result));
+		console.log(`original terms: ${map} `);
 		console.log(`original total: ${roll.total}`);
 	}
 
@@ -533,7 +536,8 @@ export class TaragnorSecurity {
 		if (!player_id)
 			throw new Error("No Player Id");
 		const game = getGame();
-		console.debug(`${game.users!.get(player_id)?.name} has reported in`);
+		const name = game.users!.get(player_id)?.name;
+		console.debug(`${name} has reported in`);
 		this.logger.playerSignIn(player_id);
 		await this.sendReportAcknowledge(player_id);
 	}
