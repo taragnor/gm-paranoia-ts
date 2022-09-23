@@ -1,24 +1,31 @@
 {
-  "title": "Taragnor's GM Paranoia",
-  "authors": [
-    {
-      "name": "taragnor",
-      "flags": {}
-    }
-  ],
-  "version": "1.1.0",
-  "esmodules": [
-    "es/main.js"
-  ],
-  "styles": [
-    "css/style.css"
-  ],
-  "socket": true,
-  "manifest": "https://raw.githubusercontent.com/taragnor/gm-paranoia-taragnor/main/module.json",
-  "download": "https://github.com/taragnor/gm-paranoia-taragnor/archive/refs/tags/v.1.0.2.zip",
-  "id": "gm-paranoia-taragnor",
-  "compatibility": {
-    "minimum": "0.9",
-    "verified": "9"
-  }
+	"title": "Taragnor's GM Paranoia",
+	"description": "Security Suite for Foundry",
+	"author": "taragnor",
+	"authors": [{
+		"name": "Taragnor",
+		"url":"",
+		"discord":"Taragnor#3338"
+	}],
+	"version": "1.1.0",
+	"compatibleCoreVersion": "10",
+	"compatibility": {
+		"minimum": "10",
+		"verified": "10.285",
+		"maximum": "10"
+	},
+	"esmodules": [
+		"es/main.js"
+	],
+	"styles": [
+		"css/style.css"
+	],
+	"socket": true,
+	"system": [],
+	"relationshisps": {
+		"requires": []
+	},
+	"manifest": "https://raw.githubusercontent.com/taragnor/gm-paranoia-taragnor/main/module.json",
+	"download": "https://github.com/taragnor/gm-paranoia-taragnor/archive/refs/tags/v.1.1.0.zip",
+	"id": "gm-paranoia-taragnor"
 }
