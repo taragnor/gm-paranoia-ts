@@ -1,8 +1,8 @@
 import { } from "./roller-patch.js";
 import {DiceSecurity} from "./diceSecurity.js";
-import {DataSecurity} from "./dataSecurity.js";
+import {ChangeLogger} from "./dataSecurity.js";
 
-Hooks.on("ready", DataSecurity.init.bind(DataSecurity));
+Hooks.on("ready", ChangeLogger.init.bind(ChangeLogger));
 Hooks.on("ready", DiceSecurity.SecurityInit.bind(DiceSecurity));
 
 export function getGame(): Game {

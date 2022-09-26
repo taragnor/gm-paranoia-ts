@@ -1,12 +1,18 @@
-interface Changes {
-	playerId: string;
+import {getGame} from "./main.js";
+
+interface ChangeGroup {
+	id: string; //ID of changed object
+	playerId: string; //player who changed
+	changes: RecursiveArray<ChangeEntry>;
+}
+
+interface ChangeEntry {
 	oldValue: any;
 	key: string;
 	newValue: any;
-	__isChanges: boolean;
 }
 
-interface ChangeLog {
+interface FoundryChangeLog {
 	system : ArbitraryObject;
 	_id: string;
 	_stats : {
@@ -17,7 +23,7 @@ interface ChangeLog {
 
 type RecursiveArray<T> = (T | T[])[];
 
-export class DataSecurity {
+export class ChangeLogger {
 	static logFilePath : string = "";
 
 	static init() {
@@ -25,44 +31,72 @@ export class DataSecurity {
 		Hooks.on("preUpdateActor", this.onActorPreUpdate.bind(this));
 	}
 
-	static onActorPreUpdate( actor: Actor, changes: ChangeLog, _options: {}, userId:string  ) {
+	static async onActorPreUpdate( actor: Actor, changes: FoundryChangeLog, _options: {}, userId:string  ) {
 		const oldS = actor.system;
 		const newS = changes.system;
-		const list = this.iterateObject(oldS, newS, userId);
+		if (!actor.id) throw new Error("Null Id");
+		const list = this.getChangeGroup(oldS, newS, userId, actor.id);
 		console.log("Update");
 		console.log(list);
-		this.storeChanges(list);
+		await this.storeChanges(list);
 	}
 
-	static iterateObject ( oldData : ArbitraryObject, newData: ArbitraryObject, playerId: string) : RecursiveArray<Changes> {
+	static getChangeGroup(oldData: ArbitraryObject, newData: ArbitraryObject, playerId: string, FoundryDocumentId: string) : ChangeGroup {
+		const changes = this.iterateObject( oldData, newData);
+		return {
+			id: FoundryDocumentId,
+			playerId,
+			changes: changes,
+		};
+	}
+
+	static iterateObject ( oldData : ArbitraryObject, newData: ArbitraryObject) : RecursiveArray<ChangeEntry> {
 		return Object.entries(newData)
 			.map( ([key, val]) => {
 				const oldval = oldData[key];
 				if (typeof val == "object") {
-					return this.iterateObject(oldval, newData, playerId);
+					return this.iterateObject(oldval, newData);
 				} else {
 					return {
-						playerId,
 						key,
 						oldValue: oldval,
 						newValue: val,
-						__isChanges: true,
 					};
 				}
 			})
 		.flat(1);
 	}
 
-	static isChanges(x: ArbitraryObject) : x is Changes {
-		if (x.__isChanges) return true;
-		return false;
-	}
-
-	static storeChanges(list: RecursiveArray<Changes>) : void {
+	static async storeChanges(list: ChangeGroup) : Promise<void> {
 		//TODO: open log file, save to thing
-
+		const game = getGame();
+		const path = `./worlds/${game.world.id}/data/`;
+		const json = JSON.stringify(list);
+		try {
+			const file = new File(json, "changelog.db"); //
+			FilePicker.upload("changelog.db", path, file);
+		} catch (e) {
+			throw e;
+		}
 	}
 
+	static async readChanges(list: ChangeGroup) : Promise<ChangeGroup[]> {
+		const game = getGame();
+		const path = `./worlds/${game.world.id}/data/changelog.db`;
+		try {
+			const data : string = await new Promise ( (conf, rej) => {
+				fs.readFile(path, 'utf8', (err, data) => {
+					if (err)
+						rej(err);
+					else
+						conf(data);
+				});
+			});
+			return JSON.parse(data);
+		} catch (e) {
+			ui.notifications!.error("Read error on changelog.db");
+			throw e;
+		}
+	}
 }
-
 
