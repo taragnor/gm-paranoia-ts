@@ -25,6 +25,9 @@ type RecursiveArray<T> = (T | T[])[];
 
 export class ChangeLogger {
 	static logFilePath : string = "";
+	static source: Parameters<typeof FilePicker.upload>[0]
+	static folder : string;
+
 
 	static init() {
 		// Hooks.on("updateActor", this.onActorUpdate.bind(this));
@@ -39,6 +42,20 @@ export class ChangeLogger {
 		console.log("Update");
 		console.log(list);
 		await this.storeChanges(list);
+	}
+
+	static async init () {
+		//TODO: resolve this and set a source
+		const fp = new FilePicker(<any>{
+			title: 'DF_CHAT_ARCHIVE.Settings.ArchiveFolder_Name',
+			type: 'folder',
+			field: input,
+			callback: async (path: string) => {
+				this.source = fp.activeSource;
+				this.folder = path;
+			},
+			button: event.currentTarget
+		});
 	}
 
 	static getChangeGroup(oldData: ArbitraryObject, newData: ArbitraryObject, playerId: string, FoundryDocumentId: string) : ChangeGroup {
@@ -73,8 +90,8 @@ export class ChangeLogger {
 		const path = `./worlds/${game.world.id}/data/`;
 		const json = JSON.stringify(list);
 		try {
-			const file = new File(json, "changelog.db"); //
-			FilePicker.upload("changelog.db", path, file);
+			const file = new File([json], "changelog.db"); //
+			FilePicker.upload(this.source, path, file);
 		} catch (e) {
 			throw e;
 		}
