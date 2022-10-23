@@ -1,4 +1,5 @@
 {
+	"id": "gm-paranoia-taragnor",
 	"title": "Taragnor's GM Paranoia",
 	"description": "Security Suite for Foundry",
 	"author": "taragnor",
@@ -26,6 +27,5 @@
 		"requires": []
 	},
 	"manifest": "https://raw.githubusercontent.com/taragnor/gm-paranoia-taragnor/main/module.json",
-	"download": "https://github.com/taragnor/gm-paranoia-taragnor/archive/refs/tags/v.1.1.0.zip",
-	"id": "gm-paranoia-taragnor"
+	"download": "https://github.com/taragnor/gm-paranoia-taragnor/archive/refs/tags/v.1.1.0.zip"
 }

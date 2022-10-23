@@ -31,7 +31,8 @@ export class ChangeLogger {
 
 	static init() {
 		// Hooks.on("updateActor", this.onActorUpdate.bind(this));
-		Hooks.on("preUpdateActor", this.onActorPreUpdate.bind(this));
+		// Hooks.on("preUpdateActor", this.onActorPreUpdate.bind(this));
+		// this.initSource();
 	}
 
 	static async onActorPreUpdate( actor: Actor, changes: FoundryChangeLog, _options: {}, userId:string  ) {
@@ -44,19 +45,19 @@ export class ChangeLogger {
 		await this.storeChanges(list);
 	}
 
-	static async init () {
-		//TODO: resolve this and set a source
-		const fp = new FilePicker(<any>{
-			title: 'DF_CHAT_ARCHIVE.Settings.ArchiveFolder_Name',
-			type: 'folder',
-			field: input,
-			callback: async (path: string) => {
-				this.source = fp.activeSource;
-				this.folder = path;
-			},
-			button: event.currentTarget
-		});
-	}
+	//static async initSource () {
+	//	//TODO: resolve this and set a source
+	//	const fp = new FilePicker(<any>{
+	//		title: 'DF_CHAT_ARCHIVE.Settings.ArchiveFolder_Name',
+	//		type: 'folder',
+	//		field: input,
+	//		callback: async (path: string) => {
+	//			this.source = fp.activeSource;
+	//			this.folder = path;
+	//		},
+	//		button: event.currentTarget
+	//	});
+	//}
 
 	static getChangeGroup(oldData: ArbitraryObject, newData: ArbitraryObject, playerId: string, FoundryDocumentId: string) : ChangeGroup {
 		const changes = this.iterateObject( oldData, newData);
@@ -97,23 +98,23 @@ export class ChangeLogger {
 		}
 	}
 
-	static async readChanges(list: ChangeGroup) : Promise<ChangeGroup[]> {
-		const game = getGame();
-		const path = `./worlds/${game.world.id}/data/changelog.db`;
-		try {
-			const data : string = await new Promise ( (conf, rej) => {
-				fs.readFile(path, 'utf8', (err, data) => {
-					if (err)
-						rej(err);
-					else
-						conf(data);
-				});
-			});
-			return JSON.parse(data);
-		} catch (e) {
-			ui.notifications!.error("Read error on changelog.db");
-			throw e;
-		}
-	}
+	// static async readChanges(list: ChangeGroup) : Promise<ChangeGroup[]> {
+	// 	const game = getGame();
+	// 	const path = `./worlds/${game.world.id}/data/changelog.db`;
+	// 	try {
+	// 		const data : string = await new Promise ( (conf, rej) => {
+	// 			fs.readFile(path, 'utf8', (err, data) => {
+	// 				if (err)
+	// 					rej(err);
+	// 				else
+	// 					conf(data);
+	// 			});
+	// 		});
+	// 		return JSON.parse(data);
+	// 	} catch (e) {
+	// 		ui.notifications!.error("Read error on changelog.db");
+	// 		throw e;
+	// 	}
+	// }
 }
 
