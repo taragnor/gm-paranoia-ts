@@ -171,7 +171,6 @@ export class DiceSecurity {
 		let roll : RollType = Roll.fromJSON(rollString!) as RollType;
 		// const dice = new Roll(rollString);
 		try {
-			console.log(roll.total);
 			if (!roll.total)
 				//@ts-ignore
 				roll._evaluated = false;
