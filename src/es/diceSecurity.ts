@@ -1,6 +1,7 @@
 import { SecurityLogger } from "./security-logger.js";
-import {getGame} from "./foundry-tools.js";
+import {getGame, localize} from "./foundry-tools.js";
 import {Debug } from "./debug.js";
+
 
 declare global {
 	interface ValidCommandCodes {
@@ -40,6 +41,22 @@ export class DiceSecurity {
 			this.initialReportIn();
 		Hooks.on("renderChatMessage", this.verifyChatRoll.bind(this));
 		Object.freeze(this);
+	}
+
+	static get reasons() {
+		return {
+			"unused_rolls": localize("TaragnorSecurity.diceProtection.reasons.unused_rolls"),
+			"no-report": localize("TaragnorSecurity.diceProtection.reasons.no-report"),
+			"stale": localize("TaragnorSecurity.diceProtection.reasons.stale"),
+			"verified": localize("TaragnorSecurity.diceProtection.reasons.verified"),
+			"roll_modified": localize("TaragnorSecurity.diceProtection.reasons.roll_modified"),
+			"not found": localize("TaragnorSecurity.diceProtection.reasons.not_found"),
+			"roll_used_multiple_times":localize("TaragnorSecurity.diceProtection.reasons.used_multiple_times"),
+			"already_done": "",
+			"unused": "",
+			"no-roll": "",
+		} as const;
+
 	}
 
 	static rollRequest(dice_expr = "1d6", timestamp: number, targetGMId:string) {
@@ -386,36 +403,38 @@ export class DiceSecurity {
 		const logger_response = this.logger.verifyRolls(rolls, timestamp, player_id!, chatmessage.id!);
 		const verified = (rolls.length > 0) ? logger_response : "no-roll";
 		// const insert_target = html.find(".message-header");
+		const msg = this.reasons[verified];
 		switch(verified) {
 			case "already_done":
 				console.log("Already Done");
 				break;
 			case "unused_rolls":
-				this.susMessage(html, "Has Unused rolls", chatmessage);
+				this.susMessage(html, msg, chatmessage);
 				break;
 			case "no-report":
-				this.susMessage(html, "Never reported in", chatmessage);
+				this.susMessage(html, msg, chatmessage);
 				break;
 			case "stale":
-				this.susMessage(html, "Roll used is stale", chatmessage);
+				this.susMessage(html, msg, chatmessage);
 				break;
 			case "verified":
-				this.verifyMessage(html, "verified", chatmessage);
+				this.verifyMessage(html, msg, chatmessage);
 				break;
 			case "roll_modified":
-				this.cheaterMessage(html, "Roll Modification detected", chatmessage);
+				this.cheaterMessage(html, msg, chatmessage);
 				break;
 			case "not found":
-				this.susMessage(html, "Roll not found", chatmessage);
+				this.susMessage(html, msg, chatmessage);
 				break;
 			case "roll_used_multiple_times":
-				this.susMessage(html, "Roll used twice", chatmessage);
+				this.susMessage(html, msg, chatmessage);
 				break;
 			case "no-roll": //currently not used
 				// this.cheaterMessage(html, "No Roll", chatmessage);
 				break;
 			default:
 				this.susMessage(html, `unusual error ${verified}`, chatmessage);
+				throw new Error(`Unusual Error ${verified}`);
 				break;
 		}
 		return true;
@@ -424,7 +443,8 @@ export class DiceSecurity {
 	static susMessage(html: JQuery<HTMLElement>, reason:string, chatmessage: ChatMessage) {
 		const insert_target = html.find(".message-header");
 		html.addClass("player-sus");
-		$(`<div class="player-sus security-msg"> ${chatmessage.user!.name} is Sus (${reason}) </div>`).insertBefore(insert_target);
+		const msg = localize("TaragnorSecurity.diceProtection.report.sus");
+		$(`<div class="player-sus security-msg"> ${chatmessage.user!.name} ${msg} (${reason}) </div>`).insertBefore(insert_target);
 		//TODO: need better way to find rollId now that rolls can be multiple
 		const rollId= chatmessage.roll!.options._securityId;
 		this.dispatchCheaterMsg(chatmessage.user!.id!, "sus", rollId );
@@ -433,7 +453,8 @@ export class DiceSecurity {
 	static cheaterMessage(html: JQuery<HTMLElement>, reason: string, chatmessage: ChatMessage) {
 		const insert_target = html.find(".message-header");
 		html.addClass("cheater-detected");
-		$(`<div class="cheater-detected security-msg"> ${chatmessage.user!.name} is a cheater (${reason}) </div>`).insertBefore(insert_target);
+		const msg = localize("TaragnorSecurity.diceProtection.report.cheater");
+		$(`<div class="cheater-detected security-msg"> ${chatmessage.user!.name} ${msg} (${reason}) </div>`).insertBefore(insert_target);
 		//TODO: need better way to find rollId now that rolls can be multiple
 		const rollId= chatmessage.roll!.options._securityId;
 		this.dispatchCheaterMsg(chatmessage.user!.id!, "cheater", rollId);
@@ -441,7 +462,8 @@ export class DiceSecurity {
 
 	static verifyMessage(html: JQuery<HTMLElement>, _reason: string, _chatmessage: ChatMessage) {
 		const insert_target = html.find(".message-header");
-		const insert = $(`<div class="roll-verified security-msg"> Roll Verified </div>`);
+		const message = localize ('TaragnorSecurity.diceProtection.report.verified0') ;
+		const insert = $(`<div class="roll-verified security-msg"> ${message} </div>`);
 		this.startTextAnimation(insert);
 		html.addClass("roll-verified");
 		insert.insertBefore(insert_target);
@@ -457,7 +479,7 @@ export class DiceSecurity {
 		const changeText = async () =>  {
 			await sleep(5000 + Math.random() * 10000);
 			const original = html.text();
-			html.text("No Cheating");
+			html.text(localize (`TaragnorSecurity.diceProtection.report.verified1`) );
 			await sleep(5000 + Math.random() * 10000);
 			html.text(original);
 			setTimeout(changeText, 10000 + Math.random() * 20000);

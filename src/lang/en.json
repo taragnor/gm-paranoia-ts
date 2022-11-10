@@ -3,5 +3,18 @@
 "TaragnorSecurity.settings.monitorChanges.name": "Monitor Changes",
 "TaragnorSecurity.settings.monitorChanges.hint": "Log Changes made to Items and Actors",
 "TaragnorSecurity.settings.monitorRolls.name" : "Dice Protection",
-"TaragnorSecurity.settings.monitorRolls.hint" : "Monitor and Verify Dice Rolls"
+"TaragnorSecurity.settings.monitorRolls.hint" : "Monitor and Verify Dice Rolls",
+
+"TaragnorSecurity.diceProtection.report.verified0" : "Roll Verified",
+"TaragnorSecurity.diceProtection.report.verified1" : "No Cheating",
+"TaragnorSecurity.diceProtection.report.cheater" : "is a cheater",
+"TaragnorSecurity.diceProtection.report.sus" : "is Suspicious",
+"TaragnorSecurity.diceProtection.reasons.unused_rolls": "has unused rolls",
+"TaragnorSecurity.diceProtection.reasons.no-report": "never reported in",
+"TaragnorSecurity.diceProtection.reasons.stale":  "Roll used is stale",
+"TaragnorSecurity.diceProtection.reasons.verified":  "Verified",
+"TaragnorSecurity.diceProtection.reasons.roll_modified":  "Roll Modification Detected",
+"TaragnorSecurity.diceProtection.reasons.not_found":  "Roll Not Found",
+"TaragnorSecurity.diceProtection.reasons.used_multiple_times": "Roll Used Multiple Times"
+
 }
