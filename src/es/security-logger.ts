@@ -1,5 +1,5 @@
 import {Debug} from "./debug.js";
-import {getGame} from "./main.js";
+import {getGame} from "./foundry-tools.js";
 import {DiceSecurity} from "./diceSecurity.js";
 
 export class SecurityLogger {

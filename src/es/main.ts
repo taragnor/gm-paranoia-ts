@@ -1,16 +1,15 @@
 import { } from "./roller-patch.js";
 import {DiceSecurity} from "./diceSecurity.js";
 import {ChangeLogger} from "./dataSecurity.js";
+import {SecuritySettings} from "./security-settings.js";
 
-Hooks.on("ready", ChangeLogger.init.bind(ChangeLogger));
-Hooks.on("ready", DiceSecurity.SecurityInit.bind(DiceSecurity));
 
-export function getGame(): Game {
-	const g = game;
-	if (g != undefined && "actors" in g) {
-		return g;
-	}
-	else throw new Error("Tried to get Game and failed");
+Hooks.on("ready",  () => {
+	SecuritySettings.init();
+	if (SecuritySettings.monitorChanges())
+		ChangeLogger.init();
+	if (SecuritySettings.monitorDiceRolls())
+		DiceSecurity.SecurityInit();
+});
 
-}
 

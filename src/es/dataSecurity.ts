@@ -1,4 +1,4 @@
-import {getGame} from "./main.js";
+import {getGame} from "./foundry-tools.js";
 
 interface ChangeGroup {
 	id: string; //ID of changed object

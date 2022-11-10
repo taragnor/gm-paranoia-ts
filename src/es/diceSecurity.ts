@@ -1,5 +1,5 @@
 import { SecurityLogger } from "./security-logger.js";
-import {getGame} from "./main.js";
+import {getGame} from "./foundry-tools.js";
 import {Debug } from "./debug.js";
 
 declare global {

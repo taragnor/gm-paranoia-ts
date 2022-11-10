@@ -18,6 +18,15 @@
 	"esmodules": [
 		"es/main.js"
 	],
+	"languages": [
+		{
+			"lang": "en",
+			"name": "English",
+			"path": "lang/en.json",
+			"title": "Taragnor GM Paranoia",
+			"description": "A security suite for Foundry VTT"
+		}
+	],
 	"styles": [
 		"css/style.css"
 	],

@@ -1,0 +1,7 @@
+{
+
+"TaragnorSecurity.settings.monitorChanges.name": "Monitor Changes",
+"TaragnorSecurity.settings.monitorChanges.hint": "Log Changes made to Items and Actors",
+"TaragnorSecurity.settings.monitorRolls.name" : "Dice Protection",
+"TaragnorSecurity.settings.monitorRolls.hint" : "Monitor and Verify Dice Rolls"
+}
