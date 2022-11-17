@@ -1,0 +1,17 @@
+<!-- takes "changes" as a ChangeEntry[]-->
+
+<table>
+	{{#each changes as |change|}}
+	<tr>
+		<td>
+			{{change.key}}
+		</td>
+		<td>
+			{{change.newValue}}
+		</td>
+		<td>
+			{{change.oldValue}}
+		</td>
+	</tr>
+	{{/each}}
+</table>

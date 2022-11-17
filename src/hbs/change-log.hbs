@@ -1,0 +1,35 @@
+<table>
+	<!-- headerrow -->
+	<tr>
+		<td>
+			Player Name
+		</td>
+		<td>
+			When
+		</td>
+		<td>
+			Change Made in
+		</td>
+		<td>
+			property Changed
+		</td>
+		<td>
+			New Value
+		</td>
+		<td>
+			Old Value
+		</td>
+	</tr>
+	{{#each log as |row|}}
+	<tr>
+		<td>
+			{{row.userName}}
+		</td>
+		<td>
+			{{row.humanReadableTime}}
+		</td>
+		{{> "module/gm-paranoia-taragnor/hbs/changelog-subtable.hbs" changes=row.changes }}
+	</tr>
+	{{/each}}
+
+</table>
