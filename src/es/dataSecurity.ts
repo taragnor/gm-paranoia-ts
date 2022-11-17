@@ -1,4 +1,5 @@
 import {getGame} from "./foundry-tools.js";
+import {ChangelogDialog} from "./changelog-dialog.js";
 import {StorageManager} from "./dataStorage.js";
 import {ChangeGroup, ChangeEntry, RecursiveArray} from "./change-group.js";
 import {Debug} from "./debug.js";

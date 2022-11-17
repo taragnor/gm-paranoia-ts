@@ -3,6 +3,7 @@ import {ChangeLogger} from "./dataSecurity.js";
 export class ChangelogDialog extends Dialog {
 
 	constructor () {
+		// TODO: Why wont this work?
 		super( {
 			title: "Change Log",
 			content: "",
@@ -13,10 +14,11 @@ export class ChangelogDialog extends Dialog {
 			buttons: {
 				close: {
 					label: "close",
-					icon: "close",
+					// icon: "close",
 					callback: () => {},
 				},
-			}
+			},
+			default: "close",
 		});
 	}
 
@@ -27,6 +29,7 @@ export class ChangelogDialog extends Dialog {
 	}
 
 	async onRender() {
+		this.element.css("height","auto");
 		this.refreshContent();
 	}
 
@@ -42,8 +45,13 @@ export class ChangelogDialog extends Dialog {
 		const e = $(this.element);
 		e.empty();
 		const html = await this.getContent();
-		e.append(html);
+		e.append($(html));
+		$($(html)).css("height", "auto important!");
+
 	}
 
 
 }
+
+//@ts-ignore
+window.ChangelogDialog = ChangelogDialog;
