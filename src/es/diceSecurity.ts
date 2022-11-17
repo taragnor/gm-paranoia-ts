@@ -397,8 +397,7 @@ export class DiceSecurity {
 		const player_id = chatmessage.user!.id;
 		if (!chatmessage["rolls"]) {
 			if (!html.hasClass("roll-verified")) //tries to resist forged roll-verified header on a non-roll message
-				return true;
-		}
+				return true; }
 		const rolls : RollType[] = chatmessage.rolls as RollType[] ?? [] ;
 		const logger_response = this.logger.verifyRolls(rolls, timestamp, player_id!, chatmessage.id!);
 		const verified = (rolls.length > 0) ? logger_response : "no-roll";

@@ -1,19 +1,11 @@
 import {getGame} from "./foundry-tools.js";
+import {StorageManager} from "./dataStorage.js";
+import {ChangeGroup, ChangeEntry, RecursiveArray} from "./change-group.js";
+import {Debug} from "./debug.js";
 
-interface ChangeGroup {
-	id: string; //ID of changed object
-	playerId: string; //player who changed
-	changes: RecursiveArray<ChangeEntry>;
-}
-
-interface ChangeEntry {
-	oldValue: any;
-	key: string;
-	newValue: any;
-}
-
-interface FoundryChangeLog {
-	system : ArbitraryObject;
+export interface FoundryChangeLog {
+	system ?: ArbitraryObject;
+	name ?: string;
 	_id: string;
 	_stats : {
 		modifiedTime: number;
@@ -21,100 +13,109 @@ interface FoundryChangeLog {
 	};
 }
 
-type RecursiveArray<T> = (T | T[])[];
 
 export class ChangeLogger {
 	static logFilePath : string = "";
-	static source: Parameters<typeof FilePicker.upload>[0]
 	static folder : string;
-
+	static log: ChangeGroup[];
 
 	static init() {
 		// Hooks.on("updateActor", this.onActorUpdate.bind(this));
-		// Hooks.on("preUpdateActor", this.onActorPreUpdate.bind(this));
-		// this.initSource();
+		Hooks.on("preUpdateActor", this.onAnyPreUpdate.bind(this));
+		Hooks.on("preUpdateItem", this.onAnyPreUpdate.bind(this));
+		StorageManager.initSource();
+		this.log = [];
 	}
 
-	static async onActorPreUpdate( actor: Actor, changes: FoundryChangeLog, _options: {}, userId:string  ) {
-		const oldS = actor.system;
-		const newS = changes.system;
-		if (!actor.id) throw new Error("Null Id");
-		const list = this.getChangeGroup(oldS, newS, userId, actor.id);
+	// static async onActorPreUpdate( actor: Actor, changes: FoundryChangeLog, _options: {}, userId:string  ) {
+	// 	const item = actor;
+	// 	if (!item.id) throw new Error("Null Id");
+	// 	let CG  = new ChangeGroup(item.id, userId);
+	// 	if (changes.system) {
+	// 		const oldS = item.system;
+	// 		const newS = changes.system;
+	// 		const list = this.getChangeGroup(oldS, newS, userId, item.id);
+	// 		CG.merge(list);
+	// 	}
+	// 	if (changes.name) {
+	// 		const oldN = item.name;
+	// 		const newN = changes.name;
+	// 		CG.add("name", oldN, newN);
+	// 	}
+	// 	console.log("Update");
+	// 	console.log(CG);
+	// 	this.log.push(CG);
+	// }
+
+
+	static async onAnyPreUpdate(thing: Item | Actor, changes: FoundryChangeLog, _options: {}, userId: string) {
+		const item = thing;
+		if (!item.id) throw new Error("Null Id");
+		let CG  = new ChangeGroup(item.id, userId);
+		if (changes.system) {
+			const oldS = item.system;
+			const newS = changes.system;
+			const list = this.getChangeGroup(oldS, newS, userId, item.id);
+			CG.merge(list);
+		}
+		if (changes.name) {
+			const oldN = item.name;
+			const newN = changes.name;
+			CG.add("name", oldN, newN);
+		}
 		console.log("Update");
-		console.log(list);
-		await this.storeChanges(list);
+		console.log(CG);
+		this.log.push(CG);
 	}
 
-	//static async initSource () {
-	//	//TODO: resolve this and set a source
-	//	const fp = new FilePicker(<any>{
-	//		title: 'DF_CHAT_ARCHIVE.Settings.ArchiveFolder_Name',
-	//		type: 'folder',
-	//		field: input,
-	//		callback: async (path: string) => {
-	//			this.source = fp.activeSource;
-	//			this.folder = path;
-	//		},
-	//		button: event.currentTarget
-	//	});
-	//}
+	// static async onItemPreUpdate( item: Item, changes: FoundryChangeLog, _options:{}, userId: string) {
+	// 	const oldS = item.system;
+	// 	const newS = changes.system;
+	// 	if (!item.id) throw new Error("Null Id");
+	// 	const list = this.getChangeGroup(oldS, newS, userId, item.id);
+	// 	console.log("Update");
+	// 	console.log(changes);
+	// 	console.log(list);
+	// 	this.log.push(list);
+
+	// }
 
 	static getChangeGroup(oldData: ArbitraryObject, newData: ArbitraryObject, playerId: string, FoundryDocumentId: string) : ChangeGroup {
 		const changes = this.iterateObject( oldData, newData);
-		return {
-			id: FoundryDocumentId,
-			playerId,
-			changes: changes,
-		};
+		const CG = new ChangeGroup( FoundryDocumentId, playerId);
+		CG.addChangeEntries(changes);
+		return CG;
 	}
 
-	static iterateObject ( oldData : ArbitraryObject, newData: ArbitraryObject) : RecursiveArray<ChangeEntry> {
-		return Object.entries(newData)
-			.map( ([key, val]) => {
-				const oldval = oldData[key];
-				if (typeof val == "object") {
-					return this.iterateObject(oldval, newData);
-				} else {
-					return {
-						key,
-						oldValue: oldval,
-						newValue: val,
-					};
-				}
-			})
-		.flat(1);
-	}
-
-	static async storeChanges(list: ChangeGroup) : Promise<void> {
-		//TODO: open log file, save to thing
-		const game = getGame();
-		const path = `./worlds/${game.world.id}/data/`;
-		const json = JSON.stringify(list);
+	static iterateObject ( oldData : ArbitraryObject, newData: ArbitraryObject, prefix: String[]  = []) : RecursiveArray<ChangeEntry> {
+		console.log(oldData);
+		console.log(newData);
 		try {
-			const file = new File([json], "changelog.db"); //
-			FilePicker.upload(this.source, path, file);
-		} catch (e) {
+			return Object.entries(newData)
+				.map( ([key, val]) => {
+					let oldval;
+					try {
+						oldval = oldData[key];
+					} catch {
+						Debug(newData);
+						Debug(oldData);
+						throw new Error(`Problem with key ${key}`);
+					}
+					if (typeof val == "object") {
+						return this.iterateObject(oldval, newData[key], [...prefix, key]);
+					} else {
+						return {
+							key: [...prefix, key].join("."),
+							oldValue: oldval,
+							newValue: val,
+						};
+					}
+				})
+				.flat(1);
+		} catch (e)  {
 			throw e;
 		}
 	}
 
-	// static async readChanges(list: ChangeGroup) : Promise<ChangeGroup[]> {
-	// 	const game = getGame();
-	// 	const path = `./worlds/${game.world.id}/data/changelog.db`;
-	// 	try {
-	// 		const data : string = await new Promise ( (conf, rej) => {
-	// 			fs.readFile(path, 'utf8', (err, data) => {
-	// 				if (err)
-	// 					rej(err);
-	// 				else
-	// 					conf(data);
-	// 			});
-	// 		});
-	// 		return JSON.parse(data);
-	// 	} catch (e) {
-	// 		ui.notifications!.error("Read error on changelog.db");
-	// 		throw e;
-	// 	}
-	// }
 }
 

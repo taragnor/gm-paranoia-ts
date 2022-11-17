@@ -14,6 +14,10 @@ interface Actor {
 	system: ArbitraryObject;
 }
 
+interface Item {
+	system: ArbitraryObject;
+}
+
 interface ChatMessage {
 	roll: RollType;
 }
@@ -74,6 +78,4 @@ interface AwaitedRoll {
 	resolve: (conf: Promise<BasicRollPackage> | BasicRollPackage ) => void ;
 	reject: (reason:any) => void ;
 }
-
 type statusType = "unused" |"no-report" |  "not found" | "roll_modified" | "roll_used_multiple_times" | "unused_rolls" |  "stale" | "verified" | "already_done" ;
-
