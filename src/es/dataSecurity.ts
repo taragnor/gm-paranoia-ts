@@ -88,8 +88,6 @@ export class ChangeLogger {
 	}
 
 	static iterateObject ( oldData : ArbitraryObject, newData: ArbitraryObject, prefix: String[]  = []) : RecursiveArray<ChangeEntry> {
-		console.log(oldData);
-		console.log(newData);
 		try {
 			return Object.entries(newData)
 				.map( ([key, val]) => {
@@ -97,8 +95,6 @@ export class ChangeLogger {
 					try {
 						oldval = oldData[key];
 					} catch {
-						Debug(newData);
-						Debug(oldData);
 						throw new Error(`Problem with key ${key}`);
 					}
 					if (typeof val == "object") {
