@@ -1,10 +1,11 @@
 
 let DebugList : any[] = []
 
-export function Debug(thing: any) {
+export function Debug(...things: any) {
 	if (DebugList == null)
 		DebugList = [];
-	DebugList.unshift(thing);
+	for (const thing of things)
+		DebugList.unshift(thing);
 }
 
 

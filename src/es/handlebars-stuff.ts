@@ -1,15 +1,15 @@
 
 export class SecurityHandlebarsStuff {
+		static templateParts = [
+			"modules/gm-paranoia-taragnor/hbs/changelog-subtable.hbs",
+		];
 
 	static init() {
 		this.loadTemplates();
 	}
 
 	static loadTemplates() {
-		const paths = [
-			"module/gm-paranoia-taragnor/hbs/changelog-subtable.hbs",
-		];
-		loadTemplates(paths);
+		loadTemplates(this.templateParts);
 	}
 
 }

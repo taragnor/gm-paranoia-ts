@@ -94,10 +94,11 @@ export class ChangeLogger {
 					let oldval;
 					try {
 						oldval = oldData[key];
-					} catch {
-						throw new Error(`Problem with key ${key}`);
+					} catch (e){
+						console.error(`Problem with key ${key}`);
+						throw e;
 					}
-					if (typeof val == "object") {
+					if (typeof val == "object" && val) {
 						return this.iterateObject(oldval, newData[key], [...prefix, key]);
 					} else {
 						return {
@@ -109,7 +110,9 @@ export class ChangeLogger {
 				})
 				.flat(1);
 		} catch (e)  {
-			throw e;
+			Debug(oldData,newData, prefix);
+			console.error(e);
+			throw new Error("Problem with iterateObject");
 		}
 	}
 

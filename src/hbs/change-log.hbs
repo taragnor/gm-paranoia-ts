@@ -1,6 +1,6 @@
 <table>
 	<!-- headerrow -->
-	<tr>
+	<th>
 		<td>
 			Player Name
 		</td>
@@ -19,7 +19,7 @@
 		<td>
 			Old Value
 		</td>
-	</tr>
+	</th>
 	{{#each log as |row|}}
 	<tr>
 		<td>
@@ -28,7 +28,9 @@
 		<td>
 			{{row.humanReadableTime}}
 		</td>
-		{{> "module/gm-paranoia-taragnor/hbs/changelog-subtable.hbs" changes=row.changes }}
+		<td></td>
+		{{> "modules/gm-paranoia-taragnor/hbs/changelog-subtable.hbs" changes=row.changes }}
+		</td>
 	</tr>
 	{{/each}}
 
