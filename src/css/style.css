@@ -37,6 +37,7 @@
 	margin-left:auto;
 	margin-right:auto;
 	user-select: all;
+	overflow: scroll;
 }
 
 .roll-log td {
@@ -49,3 +50,30 @@ div.roll-log {
 	width: 680px;
 	height: 700px;
 }
+
+table.change-log {
+	width: 700px;
+	max-height: 700px;
+	margin-left:auto;
+	margin-right:auto;
+	overflow: scroll;
+}
+
+table.change-log td {
+	padding-top: 1px;
+	padding-bottom: 1px;
+	border: 1px solid black;
+	user-select: all;
+	padding-left: 10px;
+	padding-right: 10px;
+}
+
+table.change-log th {
+	padding-top: 1px;
+	padding-bottom: 1px;
+	border: 1px solid black;
+	user-select: all;
+	padding-left: 10px;
+	padding-right: 10px;
+}
+

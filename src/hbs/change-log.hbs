@@ -1,39 +1,29 @@
 <div>
-	<table>
+	<table class="change-log">
 		<!-- headerrow -->
-		<th>
-			<td>
-				Player Name
-			</td>
-			<td>
-				When
-			</td>
-			<td>
-				Change Made in
-			</td>
-			<td>
-				property Changed
-			</td>
-			<td>
-				New Value
-			</td>
-			<td>
-				Old Value
-			</td>
-		</th>
-		{{#each log as |row|}}
 		<tr>
-			<td>
-				{{row.userName}}
-			</td>
-			<td>
-				{{row.humanReadableTime}}
-			</td>
-			<td></td>
-			{{> "modules/gm-paranoia-taragnor/hbs/changelog-subtable.hbs" changes=row.changes }}
-			</td>
-		</tr>
-		{{/each}}
+			<th>
+				Player Name
+			</th>
+			<th>
+				When
+			</th>
+			<th>
+				Changes (key, old value, new value)
+			</th>
+			{{#each log as |row|}}
+			<tr>
+				<td>
+					{{row.userName}}
+				</td>
+				<td>
+					{{row.humanReadableTime}}
+				</td>
+				<td>
+					{{> "modules/gm-paranoia-taragnor/hbs/changelog-subtable.hbs" changes=row.changes }}
+				</td>
+			</tr>
+			{{/each}}
 
 </table>
 <div>

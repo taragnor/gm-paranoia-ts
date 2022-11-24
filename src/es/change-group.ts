@@ -15,7 +15,7 @@ export class ChangeGroup {
 
 	get userName() {
 		const game = getGame();
-		return game.users!.find(x => x.id == this.playerId) ?? "Unknown";
+		return game.users!.find(x => x.id == this.playerId)?.name ?? "Unknown";
 	}
 
 	get humanReadableTime() {
