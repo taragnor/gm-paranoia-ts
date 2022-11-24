@@ -45,7 +45,7 @@ export class StorageManager {
 				return CG;
 			});
 		}
-		console.log("Returning Null Array");
+		// console.log("Returning Null Array");
 		return [];
 	}
 
@@ -61,8 +61,8 @@ export class StorageManager {
 		if (!this.ensureDirectoryCreated()) return;
 		const date = new Date();
 		const LogName = date.toISOString().split("T")[0] + ".json";
-		console.log("Writing to file ${LogName}");
-		console.log(todayList);
+		// console.log("Writing to file ${LogName}");
+		// console.log(todayList);
 		await this.writeFile(LogName, todayList);
 	}
 

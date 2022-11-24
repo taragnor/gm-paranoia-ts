@@ -37,7 +37,6 @@ export class ChangeLogger {
 		if (!game.user!.isGM) {
 			await this.notifyGM(thing, changes, options, userId);
 			return;}
-		console.log(`Preupdate ${thing.name}`);
 		const item = thing;
 		if (!item.id) throw new Error("Null Id");
 		let type: "Actor" | "Item";

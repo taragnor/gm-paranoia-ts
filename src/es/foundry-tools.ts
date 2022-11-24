@@ -18,3 +18,22 @@ export function try_localize(str: string) {
 	if (local == str) return null;
 	else return local;
 }
+
+export class Sockets {
+	static init() {
+		const game = getGame();
+		game.socket!.on("module.gm-paranoia-taragnor", this.socketHandler.bind(this));
+	}
+
+	static send(data: any) {
+		const game = getGame();
+		game.socket!.emit('module.gm-paranoia-taragnor', data);
+	}
+
+	static socketHandler(data: any) {
+		//need to convert over old socket handler to universal model
+	}
+
+}
+
+
