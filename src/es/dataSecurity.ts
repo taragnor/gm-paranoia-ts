@@ -27,7 +27,6 @@ export class ChangeLogger {
 		StorageManager.initSource();
 		this.log = await StorageManager.readChanges();
 		console.log("Log Loaded Successfully");
-		Debug(this.log);
 	}
 
 	static async onAnyPreUpdate(thing: Item | Actor, changes: FoundryChangeLog, _options: {}, userId: string) {
@@ -50,8 +49,6 @@ export class ChangeLogger {
 			const newN = changes.name;
 			CG.add("name", oldN, newN);
 		}
-		console.log("Update");
-		console.log(CG);
 		this.log.unshift(CG);
 		StorageManager.storeChanges(this.log);
 	}
@@ -93,4 +90,20 @@ export class ChangeLogger {
 	}
 
 }
+
+Hooks.on("getSceneControlButtons", function(controls:any) {
+	const game = getGame();
+	let tileControls = controls.find( (x: {name: string}) => x.name === "token");
+	if (game.user!.isGM) {
+		tileControls.tools.push({
+			icon: "fas fa-file",
+			name: "ChangeLog",
+			title: "Change Log",
+			button: true,
+			onClick: () => ChangelogDialog.create()
+		});
+	}
+});
+
+
 

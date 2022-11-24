@@ -41,8 +41,9 @@ export class ChangelogDialog extends Dialog {
 
 	async onRender() {
 		setTimeout( () => {
-		this.element.css("height","auto");
-		this.element.css("width","auto");
+			this.element.css("height","auto");
+			this.element.css("width","auto");
+			this.element.css("top", "150px");
 		}, 100); //set to trigger shortly after init so this doesn't get overwritten
 		Debug(this.element);
 		this.dataElement = $("<div> </div>");

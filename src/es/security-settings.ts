@@ -14,6 +14,9 @@ export class SecuritySettings {
 			default: true,
 			//@ts-ignore
 			restrict: true,
+			onChange: _ => {
+				setTimeout(() =>  window.location.reload(), 500);
+			}
 		});
 
 		game.settings.register(this.SYSTEM_NAME, "monitorRolls", {
@@ -25,6 +28,9 @@ export class SecuritySettings {
 			default: true,
 			//@ts-ignore
 			restrict: true,
+			onChange: _ => {
+				setTimeout(() =>  window.location.reload(), 500);
+			}
 		});
 
 	}

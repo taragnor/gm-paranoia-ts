@@ -38,9 +38,10 @@ export class DiceSecurity {
 		this.logger = new SecurityLogger(this.logpath);
 		if (this.replaceRollProtoFunctions)
 			this.replaceRollProtoFunctions();
-			this.initialReportIn();
+		this.initialReportIn();
 		Hooks.on("renderChatMessage", this.verifyChatRoll.bind(this));
 		Object.freeze(this);
+
 	}
 
 	static get reasons() {
@@ -562,6 +563,7 @@ export class DiceSecurity {
 	}
 }
 
+//INIT log button (probably should move this to the actual init,but need to manually add it or it will be gone initially
 Hooks.on("getSceneControlButtons", function(controls:any) {
 	const game = getGame();
 	let tileControls = controls.find( (x: {name: string}) => x.name === "token");
