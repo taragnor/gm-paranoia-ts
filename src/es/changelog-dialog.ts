@@ -45,7 +45,6 @@ export class ChangelogDialog extends Dialog {
 			this.element.css("width","auto");
 			this.element.css("top", "150px");
 		}, 100); //set to trigger shortly after init so this doesn't get overwritten
-		Debug(this.element);
 		this.dataElement = $("<div> </div>");
 		this.element.find(".dialog-content").append(this.dataElement);
 		this.refreshContent();

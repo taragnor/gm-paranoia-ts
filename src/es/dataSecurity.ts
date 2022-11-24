@@ -21,7 +21,6 @@ export class ChangeLogger {
 	static log: ChangeGroup[];
 
 	static async init() {
-		// Hooks.on("updateActor", this.onActorUpdate.bind(this));
 		Hooks.on("preUpdateActor", this.onAnyPreUpdate.bind(this));
 		Hooks.on("preUpdateItem", this.onAnyPreUpdate.bind(this));
 		StorageManager.initSource();
@@ -29,7 +28,16 @@ export class ChangeLogger {
 		console.log("Log Loaded Successfully");
 	}
 
-	static async onAnyPreUpdate(thing: Item | Actor, changes: FoundryChangeLog, _options: {}, userId: string) {
+	static async notifyGM (thing: Item | Actor, changes: FoundryChangeLog, options: {}, userId: string) {
+		//TODO: need to socket over to GM
+	}
+
+	static async onAnyPreUpdate(thing: Item | Actor, changes: FoundryChangeLog, options: {}, userId: string) {
+		const game = getGame();
+		if (!game.user!.isGM) {
+			await this.notifyGM(thing, changes, options, userId);
+			return;}
+		console.log(`Preupdate ${thing.name}`);
 		const item = thing;
 		if (!item.id) throw new Error("Null Id");
 		let type: "Actor" | "Item";
