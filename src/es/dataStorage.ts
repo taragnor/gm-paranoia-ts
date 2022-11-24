@@ -6,20 +6,7 @@ import {Debug} from "./debug.js";
 
 export class StorageManager {
 
-	static source: Parameters<typeof FilePicker.upload>[0]
-
 	static async initSource () {
-		//TODO: resolve this and set a source
-		// const fp = new FilePicker(<any>{
-		// 	title: 'DF_CHAT_ARCHIVE.Settings.ArchiveFolder_Name',
-		// 	type: 'folder',
-		// 	field: input,
-		// 	callback: async (path: string) => {
-		// 		this.source = fp.activeSource;
-		// 		this.folder = path;
-		// 	},
-		// 	button: event.currentTarget
-		// });
 	}
 
 	static async readChanges() : Promise<ChangeGroup[]> {
@@ -50,12 +37,10 @@ export class StorageManager {
 		}
 		const game = getGame();
 		const data = await fetch(fileNameAndPath);
-		const json = await data.json();
-		console.log("data retrieved");
-		Debug(json);
+		const json : ChangeGroup[] = await data.json();
 		if (Array.isArray(json)) {
-			return json.map( (json: any) => {
-				const CG = new ChangeGroup(json.id, json.playerId, json.time);
+			return json.map( (json) => {
+				const CG = new ChangeGroup(json.id, json.type, json.playerId, json.parentId, json.time);
 				CG.changes = json.changes;
 				return CG;
 			});

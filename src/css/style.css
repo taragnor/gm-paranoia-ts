@@ -52,6 +52,7 @@ div.roll-log {
 }
 
 table.change-log {
+	display:block;
 	width: 700px;
 	max-height: 700px;
 	margin-left:auto;

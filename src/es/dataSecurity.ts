@@ -30,35 +30,19 @@ export class ChangeLogger {
 		Debug(this.log);
 	}
 
-	// static async onActorPreUpdate( actor: Actor, changes: FoundryChangeLog, _options: {}, userId:string  ) {
-	// 	const item = actor;
-	// 	if (!item.id) throw new Error("Null Id");
-	// 	let CG  = new ChangeGroup(item.id, userId);
-	// 	if (changes.system) {
-	// 		const oldS = item.system;
-	// 		const newS = changes.system;
-	// 		const list = this.getChangeGroup(oldS, newS, userId, item.id);
-	// 		CG.merge(list);
-	// 	}
-	// 	if (changes.name) {
-	// 		const oldN = item.name;
-	// 		const newN = changes.name;
-	// 		CG.add("name", oldN, newN);
-	// 	}
-	// 	console.log("Update");
-	// 	console.log(CG);
-	// 	this.log.push(CG);
-	// }
-
-
 	static async onAnyPreUpdate(thing: Item | Actor, changes: FoundryChangeLog, _options: {}, userId: string) {
 		const item = thing;
 		if (!item.id) throw new Error("Null Id");
-		let CG  = new ChangeGroup(item.id, userId);
+		let type: "Actor" | "Item";
+		if ("items" in thing)
+			type = "Actor";
+		else type = "Item";
+		const parentId = thing.parent ? thing.parent.id! : "";
+		let CG  = new ChangeGroup(item.id, type, userId, parentId);
 		if (changes.system) {
 			const oldS = item.system;
 			const newS = changes.system;
-			const list = this.getChangeGroup(oldS, newS, userId, item.id);
+			const list = this.getChangeGroup(oldS, newS, userId, item.id, type);
 			CG.merge(list);
 		}
 		if (changes.name) {
@@ -72,21 +56,9 @@ export class ChangeLogger {
 		StorageManager.storeChanges(this.log);
 	}
 
-	// static async onItemPreUpdate( item: Item, changes: FoundryChangeLog, _options:{}, userId: string) {
-	// 	const oldS = item.system;
-	// 	const newS = changes.system;
-	// 	if (!item.id) throw new Error("Null Id");
-	// 	const list = this.getChangeGroup(oldS, newS, userId, item.id);
-	// 	console.log("Update");
-	// 	console.log(changes);
-	// 	console.log(list);
-	// 	this.log.push(list);
-
-	// }
-
-	static getChangeGroup(oldData: ArbitraryObject, newData: ArbitraryObject, playerId: string, FoundryDocumentId: string) : ChangeGroup {
+	static getChangeGroup(oldData: ArbitraryObject, newData: ArbitraryObject, playerId: string, FoundryDocumentId: string, type: "Actor" | "Item") : ChangeGroup {
 		const changes = this.iterateObject( oldData, newData);
-		const CG = new ChangeGroup( FoundryDocumentId, playerId);
+		const CG = new ChangeGroup( FoundryDocumentId, type, playerId);
 		CG.addChangeEntries(changes);
 		return CG;
 	}
