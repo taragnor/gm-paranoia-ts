@@ -20,12 +20,14 @@ export class ChangeLogger {
 	static folder : string;
 	static log: ChangeGroup[];
 
-	static init() {
+	static async init() {
 		// Hooks.on("updateActor", this.onActorUpdate.bind(this));
 		Hooks.on("preUpdateActor", this.onAnyPreUpdate.bind(this));
 		Hooks.on("preUpdateItem", this.onAnyPreUpdate.bind(this));
 		StorageManager.initSource();
-		this.log = [];
+		this.log = await StorageManager.readChanges();
+		console.log("Log Loaded Successfully");
+		Debug(this.log);
 	}
 
 	// static async onActorPreUpdate( actor: Actor, changes: FoundryChangeLog, _options: {}, userId:string  ) {
@@ -66,7 +68,8 @@ export class ChangeLogger {
 		}
 		console.log("Update");
 		console.log(CG);
-		this.log.push(CG);
+		this.log.unshift(CG);
+		StorageManager.storeChanges(this.log);
 	}
 
 	// static async onItemPreUpdate( item: Item, changes: FoundryChangeLog, _options:{}, userId: string) {
