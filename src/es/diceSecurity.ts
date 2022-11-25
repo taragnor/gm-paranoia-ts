@@ -1,5 +1,5 @@
 import { SecurityLogger } from "./security-logger.js";
-import {getGame, localize} from "./foundry-tools.js";
+import {getGame, localize, Sockets} from "./foundry-tools.js";
 import {Debug } from "./debug.js";
 
 
@@ -13,6 +13,17 @@ declare global {
 		REPORT_IN : "PLAYER_REPORT_IN";
 		REQUEST_REPORT : "GM_REQUEST_REPORT";
 		REPORT_ACK : "GM_ACKNOWLEDGE_REPORT";
+	}
+
+	enum SocketCommand {
+		ROLL_MADE = "ROLL_MADE",
+		ROLL_ERROR = "ROLL_ERROR",
+		ROLL_REQUEST = "ROLL_REQUEST",
+		PUNISH_MONGREL= "CHEATER_DETECTED",
+		DIAGNOSTIC= "DIAGNOSTIC",
+		REPORT_IN = "PLAYER_REPORT_IN",
+		REQUEST_REPORT = "GM_REQUEST_REPORT",
+		REPORT_ACK = "GM_ACKNOWLEDGE_REPORT",
 	}
 }
 
@@ -259,7 +270,6 @@ export class DiceSecurity {
 	static async updateLogFullCheat(_log: unknown) {
 		//TODO Finish
 	}
-
 
 	static async socketHandler(data: RollSendData) {
 		const game = getGame();
