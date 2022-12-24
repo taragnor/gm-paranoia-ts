@@ -3,6 +3,7 @@ import {ChangelogDialog} from "./changelog-dialog.js";
 import {StorageManager} from "./dataStorage.js";
 import {ChangeGroup, ChangeEntry, RecursiveArray} from "./change-group.js";
 import {Debug} from "./debug.js";
+import {Sockets} from "./foundry-tools.js";
 
 export interface FoundryChangeLog {
 	system ?: ArbitraryObject;
@@ -14,6 +15,18 @@ export interface FoundryChangeLog {
 	};
 }
 
+const enum SocketCommand {
+	NOTIFY_GM= "NOTIFY_GM"
+
+}
+
+interface ChangePayload {
+	thing_id: string,
+		type: "Actor" | "Item",
+		changes: FoundryChangeLog,
+		options: Object,
+		userId: string
+}
 
 export class ChangeLogger {
 	static logFilePath : string = "";
@@ -24,12 +37,46 @@ export class ChangeLogger {
 		Hooks.on("preUpdateActor", this.onAnyPreUpdate.bind(this));
 		Hooks.on("preUpdateItem", this.onAnyPreUpdate.bind(this));
 		StorageManager.initSource();
-		this.log = await StorageManager.readChanges();
-		console.log("Log Loaded Successfully");
+		try {
+			this.log = await StorageManager.readChanges();
+			console.log("Log Loaded Successfully");
+		} catch (e) {
+			this.log = [];
+			console.error(e);
+		}
+		Sockets.addHandler(SocketCommand.NOTIFY_GM, this.onGMNotify.bind(this));
 	}
 
 	static async notifyGM (thing: Item | Actor, changes: FoundryChangeLog, options: {}, userId: string) {
 		//TODO: need to socket over to GM
+		const payload : ChangePayload = {
+			thing_id: thing.id!,
+			type: "items" in thing ? "Actor" : "Item",
+			changes,
+			options,
+			userId
+		};
+		console.log("Notifying GM of changes");
+		Sockets.send(SocketCommand.NOTIFY_GM, payload);
+	}
+
+	static async onGMNotify (data : ChangePayload) {
+		console.log("Changes recieved form client");
+		const game = getGame();
+		const {thing_id, type, changes, options, userId} = data;
+		let thing = null;
+		switch (type) {
+			case "Actor":
+				thing = game.actors!.get(thing_id);
+				break;
+			case "Item":
+				thing = game.items!.get(thing_id);
+				break;
+		}
+		if (thing)
+			this.onAnyPreUpdate(thing, changes, options, userId);
+		else
+			console.warn(`Couldn't find id for ${type} : ${thing_id}`);
 	}
 
 	static async onAnyPreUpdate(thing: Item | Actor, changes: FoundryChangeLog, options: {}, userId: string) {

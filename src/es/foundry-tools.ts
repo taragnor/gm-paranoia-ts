@@ -25,7 +25,7 @@ declare global {
 
 	interface SocketPayload {
 		command: string;
-		data: any;
+		data: Object;
 	}
 }
 
