@@ -39,7 +39,6 @@ export class Sockets {
 		this.socketName = `module.${moduleName}`;
 		const game = getGame();
 		game.socket!.on(this.socketName, this.socketHandler.bind(this));
-		// game.socket!.on("module.gm-paranoia-taragnor", this.socketHandler.bind(this));
 	}
 
 	static send(command: string, data: any) {

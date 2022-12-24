@@ -56,12 +56,12 @@ export class ChangeLogger {
 			options,
 			userId
 		};
-		console.log("Notifying GM of changes");
+		// console.log("Notifying GM of changes");
 		Sockets.send(SocketCommand.NOTIFY_GM, payload);
 	}
 
 	static async onGMNotify (data : ChangePayload) {
-		console.log("Changes recieved form client");
+		// console.log("Changes recieved form client");
 		const game = getGame();
 		const {thing_id, type, changes, options, userId} = data;
 		let thing = null;
