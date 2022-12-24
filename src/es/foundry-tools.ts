@@ -19,61 +19,63 @@ export function try_localize(str: string) {
 	else return local;
 }
 
-type Handler = (data: Object) => boolean;
+type Handler = (data: Object) => (boolean | Promise<boolean>);
 
 declare global {
-	enum SocketCommand {
-		Test = "TEST",
-	}
-
-	type SocketCommandString = SocketCommand;
 
 	interface SocketPayload {
-		command: SocketCommandString;
+		command: string;
 		data: any;
 	}
 }
 
 export class Sockets {
-	static handlers: Map<SocketCommandString, Handler[]>;
+	static handlers: Map<string, Handler[]>;
+	static socketName : string;
 
 
-	static init() {
+	static init(moduleName : string) {
+		this.handlers = new Map();
+		this.socketName = `module.${moduleName}`;
 		const game = getGame();
-		game.socket!.on("module.gm-paranoia-taragnor", this.socketHandler.bind(this));
+		game.socket!.on(this.socketName, this.socketHandler.bind(this));
+		// game.socket!.on("module.gm-paranoia-taragnor", this.socketHandler.bind(this));
 	}
 
-	static send(command: SocketCommandString, data: any) {
+	static send(command: string, data: any) {
 		const payload: SocketPayload = {
 			command,
 			data,
 		};
 		const game = getGame();
-		game.socket!.emit('module.gm-paranoia-taragnor', payload);
+		game.socket!.emit(this.socketName, payload);
 	}
 
-	static addHandler(command: SocketCommandString, handler: Handler) {
+	static addHandler(command: string, handler: Handler) {
 		let array = this.handlers.get(command);
 		if (!array) {
-			array = [];
-			this.handlers.set( command, []);
+			array = new Array();
+			this.handlers.set( command, array);
 		}
+		if (!handler)
+			throw new Error("No handler given");
 		array.push(handler);
 	}
 
-	static socketHandler(payload: SocketPayload) {
+	static async socketHandler(payload: SocketPayload) {
 		const {command, data} = payload;
+		// console.log(`Handler called for ${command}`);
 		const handlerArray = this.handlers.get(command);
 		if (!handlerArray) {
 			console.warn (`No handler for ${command}`);
 			return;
 		}
 		for (const handler of handlerArray) {
-			if (handler(data)) return;
+			if (await handler(data)) return;
 		}
 	}
 
 }
 
-Sockets.addHandler( SocketCommand.ROLL_REQUEST, () => true)
-
+//@ts-ignore
+window.Sockets =Sockets

@@ -5,13 +5,13 @@ import {SecuritySettings} from "./security-settings.js";
 import {SecurityHandlebarsStuff} from "./handlebars-stuff.js";
 import {ChangelogDialog} from "./changelog-dialog.js";
 
-import {Sockets} from "./foundry-tools";
+import {Sockets} from "./foundry-tools.js";
 
 Hooks.on("ready",  () => {
 	//DEBUG
 	//@ts-ignore
 	window.ChangelogDialog = ChangelogDialog;
-	Sockets.init();
+	Sockets.init("gm-paranoia-taragnor");
 	SecurityHandlebarsStuff.init();
 	SecuritySettings.init();
 	if (SecuritySettings.monitorChanges())

@@ -2,6 +2,16 @@ import { SecurityLogger } from "./security-logger.js";
 import {getGame, localize, Sockets} from "./foundry-tools.js";
 import {Debug } from "./debug.js";
 
+const enum SocketCommand {
+	ROLL_MADE = "ROLL_MADE",
+		ROLL_ERROR = "ROLL_ERROR",
+		ROLL_REQUEST = "ROLL_REQUEST",
+		PUNISH_MONGREL= "CHEATER_DETECTED",
+		DIAGNOSTIC= "DIAGNOSTIC",
+		REPORT_IN = "PLAYER_REPORT_IN",
+		REQUEST_REPORT = "GM_REQUEST_REPORT",
+		REPORT_ACK = "GM_ACKNOWLEDGE_REPORT",
+}
 
 declare global {
 	interface ValidCommandCodes {
@@ -15,16 +25,6 @@ declare global {
 		REPORT_ACK : "GM_ACKNOWLEDGE_REPORT";
 	}
 
-	enum SocketCommand {
-		ROLL_MADE = "ROLL_MADE",
-		ROLL_ERROR = "ROLL_ERROR",
-		ROLL_REQUEST = "ROLL_REQUEST",
-		PUNISH_MONGREL= "CHEATER_DETECTED",
-		DIAGNOSTIC= "DIAGNOSTIC",
-		REPORT_IN = "PLAYER_REPORT_IN",
-		REQUEST_REPORT = "GM_REQUEST_REPORT",
-		REPORT_ACK = "GM_ACKNOWLEDGE_REPORT",
-	}
 }
 
 export class DiceSecurity {
@@ -45,14 +45,15 @@ export class DiceSecurity {
 		const game = getGame();
 		if (game.user!.isGM)
 			console.log("*** SECURITY ENABLED ***");
-		game.socket!.on("module.gm-paranoia-taragnor", this.socketHandler.bind(this));
+		// REPLACED BY SOCKET CLASS
+		// game.socket!.on("module.gm-paranoia-taragnor", this.socketHandler.bind(this));
 		this.logger = new SecurityLogger(this.logpath);
 		if (this.replaceRollProtoFunctions)
 			this.replaceRollProtoFunctions();
 		this.initialReportIn();
 		Hooks.on("renderChatMessage", this.verifyChatRoll.bind(this));
 		Object.freeze(this);
-
+		this.setSocketHandlers();
 	}
 
 	static get reasons() {
@@ -74,7 +75,7 @@ export class DiceSecurity {
 	static rollRequest(dice_expr = "1d6", timestamp: number, targetGMId:string) {
 		const game = getGame();
 		this.socketSend( {
-			command: this.codes.ROLL_REQUEST,
+			command: SocketCommand.ROLL_REQUEST,
 			target: targetGMId,
 			gm_id: targetGMId,
 			rollString: dice_expr,
@@ -85,7 +86,7 @@ export class DiceSecurity {
 
 	static dispatchCheaterMsg(player_id : string, infraction: string, rollId: number) {
 		this.socketSend( {
-			command: this.codes.PUNISH_MONGREL,
+			command: SocketCommand.PUNISH_MONGREL,
 			target: player_id,
 			infraction,
 			player_id,
@@ -95,7 +96,7 @@ export class DiceSecurity {
 
 	static rollSend(dice: string, GMtimestamp:number, player_id:string, player_timestamp:number, log_id: number) {
 		this.socketSend({
-			command:this.codes.ROLL_MADE,
+			command:SocketCommand.ROLL_MADE,
 			target: player_id,
 			dice,
 			timestamp: GMtimestamp,
@@ -107,7 +108,7 @@ export class DiceSecurity {
 
 	static rollErrorSend(player_id: string, player_timestamp: number) {
 		this.socketSend( {
-			command:this.codes.ROLL_ERROR,
+			command:SocketCommand.ROLL_ERROR,
 			target: player_id,
 			player_id,
 			player_timestamp: player_timestamp
@@ -133,11 +134,13 @@ export class DiceSecurity {
 			}
 			awaited.resolve({roll, gm_timestamp: gm_timestamp!, log_id: log_id!});
 			this.logger.awaitedRolls = this.logger.awaitedRolls.filter (x => x != awaited);
-			return {roll, gm_timestamp, log_id};
+			return true;
+			// return {roll, gm_timestamp, log_id};
 		} catch (e) {
 			console.error(e);
 			console.log(rollData);
-			return rollData;
+			return false;
+			// return rollData;
 		}
 	}
 
@@ -149,6 +152,7 @@ export class DiceSecurity {
 		if (awaited) {
 			Debug(awaited);
 			awaited.reject("some reason");
+			return false;
 		} else throw new Error ("No awaited roll somehow?");
 	}
 
@@ -165,7 +169,7 @@ export class DiceSecurity {
 		}
 		this.socketSend({
 			target: gm_id,
-			command:this.codes.DIAGNOSTIC,
+			command:SocketCommand.DIAGNOSTIC,
 			diagnostics,
 			rollId
 		});
@@ -185,8 +189,9 @@ export class DiceSecurity {
 	}
 
 	static socketSend(data: RollSendData) {
-		const game = getGame();
-		game.socket!.emit('module.gm-paranoia-taragnor', data);
+		Sockets.send(data.command, data);
+		// const game = getGame();
+		// game.socket!.emit('module.gm-paranoia-taragnor', data);
 	}
 
 	static async recievedRollRequest({gm_id, rollString, player_id, timestamp}: RollSendData) {
@@ -194,7 +199,7 @@ export class DiceSecurity {
 		if (!game.user!.isGM || game.user!.id != gm_id) {
 			console.log("Disregarding recieved roll request");
 			console.log(`${gm_id}`);
-			return;
+			return false;
 		}
 		// console.log(`Recieved request to roll ${rollString}`);
 		let roll : RollType = Roll.fromJSON(rollString!) as RollType;
@@ -208,7 +213,7 @@ export class DiceSecurity {
 			Debug(roll);
 			console.warn("returning Roll Error");
 			this.rollErrorSend(player_id!, timestamp!);
-			return;
+			return false;
 		}
 		const log_id = this.logger.getNextId();
 		// this._displayRoll(roll); // NOTE: debug code
@@ -224,12 +229,13 @@ export class DiceSecurity {
 		if (!gm_timestamp)
 			console.warn("No Timestamp provided with roll");
 		await this.logger.logRoll(roll, player_id!, gm_timestamp);
+		return true;
 	}
 
 	static async cheatDetectRecieved({player_id, infraction, rollId} : RollSendData) {
 		const game = getGame();
 		if (game.user!.id != player_id)
-			return;
+			return false;
 		const GMId = game.users!.find( x=> x.isGM)?.id!;
 		switch (infraction) {
 			case "cheater":
@@ -241,6 +247,7 @@ export class DiceSecurity {
 				await this.sendDiagnostic({gm_id: GMId, rollId: rollId!});
 				break;
 		}
+		return true;
 	}
 
 	static async recieveCheaterDiagnostic({diagnostics, rollId}: RollSendData) {
@@ -269,6 +276,19 @@ export class DiceSecurity {
 
 	static async updateLogFullCheat(_log: unknown) {
 		//TODO Finish
+	}
+
+	static setSocketHandlers() {
+		Sockets.addHandler( SocketCommand.ROLL_REQUEST, this.recievedRollRequest.bind(this) );
+		Sockets.addHandler( SocketCommand.ROLL_MADE, this.rollRecieve.bind(this))
+		Sockets.addHandler( SocketCommand.ROLL_ERROR, this.rollRecieveError.bind(this));
+		Sockets.addHandler(SocketCommand.PUNISH_MONGREL, this.cheatDetectRecieved.bind(this));
+		Sockets.addHandler(SocketCommand.DIAGNOSTIC, this.recieveCheaterDiagnostic.bind(this));
+		Sockets.addHandler(SocketCommand.REPORT_IN, this.reportInRecieved.bind(this));
+		Sockets.addHandler(SocketCommand.REQUEST_REPORT, this.reportInRequested.bind(this) );
+		Sockets.addHandler(SocketCommand.REPORT_ACK, this.onAcknowledgePlayerReportIn.bind(this));
+
+
 	}
 
 	static async socketHandler(data: RollSendData) {
@@ -445,7 +465,6 @@ export class DiceSecurity {
 			default:
 				this.susMessage(html, `unusual error ${verified}`, chatmessage);
 				throw new Error(`Unusual Error ${verified}`);
-				break;
 		}
 		return true;
 	}
@@ -466,7 +485,7 @@ export class DiceSecurity {
 		const msg = localize("TaragnorSecurity.diceProtection.report.cheater");
 		$(`<div class="cheater-detected security-msg"> ${chatmessage.user!.name} ${msg} (${reason}) </div>`).insertBefore(insert_target);
 		//TODO: need better way to find rollId now that rolls can be multiple
-		const rollId= chatmessage.roll!.options._securityId;
+		const rollId= chatmessage.rolls[0]?.options._securityId ?? 0;
 		this.dispatchCheaterMsg(chatmessage.user!.id!, "cheater", rollId);
 	}
 
@@ -520,7 +539,7 @@ export class DiceSecurity {
 		const game = getGame();
 		if (!this.logger.reported) {
 			this.socketSend( {
-				command: this.codes.REPORT_IN,
+				command: SocketCommand.REPORT_IN,
 				target: gm_id,
 				player_id: game.user!.id
 			});
@@ -531,7 +550,7 @@ export class DiceSecurity {
 	static async sendReportInRequest(player_id: string) {
 		const game = getGame();
 		this.socketSend( {
-			command: this.codes.REQUEST_REPORT,
+			command: SocketCommand.REQUEST_REPORT,
 			target: player_id,
 			gm_id: game.user!.id
 		});
@@ -540,7 +559,7 @@ export class DiceSecurity {
 	static async sendReportAcknowledge(player_id: string) {
 		const game = getGame();
 		this.socketSend( {
-			command: this.codes.REPORT_ACK,
+			command: SocketCommand.REPORT_ACK,
 			target: player_id,
 			gm_id: game.user!.id
 		});
@@ -569,6 +588,7 @@ export class DiceSecurity {
 	}
 
 	static async onAcknowledgePlayerReportIn(_data: {}) {
+		console.log("Reported in");
 		this.logger.reported = true;
 	}
 }

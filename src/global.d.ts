@@ -28,7 +28,7 @@ interface RollSendData {
 	player_id?: string;
 	timestamp?: number;
 	log_id?: number;
-	command:  ValueOf<ValidCommandCodes>;
+	command:  SocketCommandString;
 	target: string;
 	infraction ?: string;
 	rollId ?: number;
