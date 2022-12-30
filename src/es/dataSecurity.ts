@@ -36,7 +36,7 @@ export class ChangeLogger {
 	static async init() {
 		Hooks.on("preUpdateActor", this.onAnyPreUpdate.bind(this));
 		Hooks.on("preUpdateItem", this.onAnyPreUpdate.bind(this));
-		StorageManager.initSource();
+		await StorageManager.initSource();
 		try {
 			this.log = await StorageManager.readChanges();
 			console.log("Log Loaded Successfully");

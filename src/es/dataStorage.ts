@@ -7,6 +7,7 @@ import {Debug} from "./debug.js";
 export class StorageManager {
 
 	static async initSource () {
+		await this.ensureDirectoryCreated();
 	}
 
 	static async readChanges() : Promise<ChangeGroup[]> {
@@ -32,7 +33,7 @@ export class StorageManager {
 	}
 
 	static async getChanges(fileNameAndPath: string) : Promise<ChangeGroup[]> {
-		if (!this.ensureDirectoryCreated()) {
+		if (!(await this.ensureDirectoryCreated() )) {
 			return [];
 		}
 		const game = getGame();
@@ -86,16 +87,19 @@ export class StorageManager {
 		if (!dirs.map( x=> {
 			return x.split("/").pop();}).includes("paranoia-files")) {
 			try {
-				await FilePicker.createDirectory("data", `${path}\paranoia-files`);
+				await FilePicker.createDirectory("data", `${path}/paranoia-files`);
 			} catch (e) {
+				console.log(e);
 				ui.notifications?.error("Can't create Paranoia Files Directory");
-				console.error("Can't create paranoia files director");
+				console.error("Can't create paranoia files directory");
 				throw e;
 			}
 		}
 		return true;
 	}
-
-
 }
 
+
+
+//@ts-ignore
+window.StorageManager = StorageManager;

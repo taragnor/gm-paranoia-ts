@@ -14,10 +14,10 @@ Hooks.on("ready",  () => {
 	Sockets.init("gm-paranoia-taragnor");
 	SecurityHandlebarsStuff.init();
 	SecuritySettings.init();
-	if (SecuritySettings.monitorChanges())
-		ChangeLogger.init();
 	if (SecuritySettings.monitorDiceRolls())
 		DiceSecurity.SecurityInit();
+	if (SecuritySettings.monitorChanges())
+		ChangeLogger.init();
 });
 
 
