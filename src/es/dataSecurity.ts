@@ -34,8 +34,11 @@ export class ChangeLogger {
 	static log: ChangeGroup[];
 
 	static async init() {
+		const game = getGame();
 		Hooks.on("preUpdateActor", this.onAnyPreUpdate.bind(this));
 		Hooks.on("preUpdateItem", this.onAnyPreUpdate.bind(this));
+		if (!game.user!.isGM)
+			return;
 		await StorageManager.initSource();
 		try {
 			this.log = await StorageManager.readChanges();
