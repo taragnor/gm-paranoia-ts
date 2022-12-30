@@ -101,5 +101,3 @@ export class StorageManager {
 
 
 
-//@ts-ignore
-window.StorageManager = StorageManager;

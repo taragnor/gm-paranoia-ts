@@ -76,5 +76,3 @@ export class Sockets {
 
 }
 
-//@ts-ignore
-window.Sockets =Sockets
