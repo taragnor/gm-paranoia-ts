@@ -74,7 +74,8 @@ export class StorageManager {
 		});
 		const path = `./worlds/${game.world.id}/paranoia-files`;
 		const file: File = new File([blob], fileName);
-		await FilePicker.upload("data", `${path}`,file);
+		//@ts-ignore
+		await FilePicker.upload("data", `${path}`,file, {}, {notify:false} );
 	}
 
 	static async ensureDirectoryCreated() {
