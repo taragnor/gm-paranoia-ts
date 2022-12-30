@@ -35,6 +35,6 @@
 	"relationshisps": {
 		"requires": []
 	},
-	"manifest": "https://https://raw.githubusercontent.com/taragnor/gm-paranoia-taragnor-ts/master/src/module.json",
-	"download": "https://github.com/taragnor/gm-paranoia-taragnor-ts/releases/download/v.1.1.2/gm-paranoia-release-1.1.2.zip"
+	"manifest": "https://https://raw.githubusercontent.com/taragnor/gm-paranoia-ts/master/src/module.json",
+	"download": "https://github.com/taragnor/gm-paranoia-ts/releases/download/v.1.1.2/gm-paranoia-release-1.1.2.zip"
 }
