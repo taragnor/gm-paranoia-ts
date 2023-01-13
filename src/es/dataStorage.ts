@@ -46,12 +46,10 @@ export class StorageManager {
 				return CG;
 			});
 		}
-		// console.log("Returning Null Array");
 		return [];
 	}
 
 	static async storeChanges(list: ChangeGroup[]) : Promise<void> {
-		//TODO: open log file, save to thing
 		let now = new Date();
 		now.setHours(0, 0, 0);
 		const startOfDay = now.getTime();
@@ -62,8 +60,6 @@ export class StorageManager {
 		if (!this.ensureDirectoryCreated()) return;
 		const date = new Date();
 		const LogName = date.toISOString().split("T")[0] + ".json";
-		// console.log("Writing to file ${LogName}");
-		// console.log(todayList);
 		await this.writeFile(LogName, todayList);
 	}
 
