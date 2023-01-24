@@ -1,5 +1,6 @@
 import { getGame, Sockets} from "./foundry-tools.js";
 import {Debug} from "./debug.js";
+import {JournalFixUps} from "./JournalFixups.js";
 
 const ENCRYPTSTARTER = "__#ENCRYPTED#__::[v1]";
 
@@ -16,7 +17,13 @@ export class DataSecurity {
 
 	static instance: DataSecurity;
 
+	static async keyPrompt() : Promise<string> {
+		//TODO: finish this
+		return "";
+	}
+
 	static init() {
+		JournalFixUps.apply();
 		this.instance = new DataSecurity("Test Key");
 		console.log("Data Security initialized");
 	}
@@ -38,11 +45,13 @@ export class DataSecurity {
 		return this.decrypt(data.data + "X");
 	}
 
-	isEncrypted (data:string) : boolean {
+	isEncrypted (data:string | undefined) : boolean {
+		if (!data) return false;
 		return (data.startsWith(ENCRYPTSTARTER));
 	}
 
 	async decrypt( data:string, force: boolean = false) : Promise<string> {
+		console.log("Calling Decrypt base");
 		if ( !this.isEncrypted(data) && !force ) return data;
 		return await this.#getDecryptedString(data);
 	}
@@ -68,6 +77,7 @@ export class DataSecurity {
 	}
 
 	async encrypt (data: string) : Promise<string> {
+		if (this.isEncrypted(data)) return data;
 		const starter = ENCRYPTSTARTER;
 		const encryptstring = await this.#getEncryptedString(data);
 		return starter + encryptstring;
@@ -113,7 +123,7 @@ class Encryptor {
 	}
 
 	decrypt (data: string) : string {
-		console.log("Decryptor called");
+		console.log("Decryptor Full called");
 		let ret = "";
 		for (let i = 0 ; i < data.length; i++) {
 			const keyCode  = this.#key.charCodeAt(i % this.#key.length)!;
