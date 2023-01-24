@@ -51,7 +51,7 @@ export class DataSecurity {
 		if (!getGame().user!.isGM)
 		return await this.sendDecryptRequest(data);
 		else
-		return this.encryptor.decrypt(data);
+		return this.encryptor.decrypt(data.substring(ENCRYPTSTARTER.length));
 	}
 
 	async sendDecryptRequest (data: string) : Promise<string> {
@@ -75,7 +75,7 @@ export class DataSecurity {
 
 	async #getEncryptedString(data: string) : Promise<string> {
 		const game = getGame();
-		if (game.user!.isGM)
+		if (!game.user!.isGM)
 		return await this.sendEncryptRequest(data);
 		else
 		return this.encryptor.encrypt(data);
