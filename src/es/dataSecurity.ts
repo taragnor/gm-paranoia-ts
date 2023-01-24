@@ -96,21 +96,30 @@ export class DataSecurity {
 
 class Encryptor {
 
-	key: string;
+	#key: string;
 
 	constructor (key: string) {
-		this.key = key;
+		this.#key = key;
 	}
 
 	encrypt( data: string) : string {
 		console.log("Encryptor called");
-		return data;
+		let ret = "";
+		for (let i = 0 ; i < data.length; i++) {
+			const keyCode  = this.#key.charCodeAt(i % this.#key.length)!;
+			ret += String.fromCharCode(data.charCodeAt(i) + keyCode);
+		}
+		return ret;
 	}
 
 	decrypt (data: string) : string {
 		console.log("Decryptor called");
-		return data;
-
+		let ret = "";
+		for (let i = 0 ; i < data.length; i++) {
+			const keyCode  = this.#key.charCodeAt(i % this.#key.length)!;
+			ret += String.fromCharCode(data.charCodeAt(i) - keyCode);
+		}
+		return ret;
 	}
 
 }
