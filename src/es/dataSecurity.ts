@@ -1,166 +1,119 @@
-import {getGame} from "./foundry-tools.js";
-import {ChangelogDialog} from "./changelog-dialog.js";
-import {StorageManager} from "./dataStorage.js";
-import {ChangeGroup, ChangeEntry, RecursiveArray} from "./change-group.js";
+import { getGame, Sockets} from "./foundry-tools.js";
 import {Debug} from "./debug.js";
-import {Sockets} from "./foundry-tools.js";
 
-export interface FoundryChangeLog {
-	system ?: ArbitraryObject;
-	name ?: string;
-	_id: string;
-	_stats : {
-		modifiedTime: number;
-		lastModifiedBy: string;
-	};
+const ENCRYPTSTARTER = "__#ENCRYPTED#__::[v1]";
+
+
+enum SocketCommand{
+	ENCRYPT_REQUEST= "ENCRYPT-REQUEST",
+		DECRYPT_REQUEST= "DECRYPT-REQUEST",
 }
 
-const enum SocketCommand {
-	NOTIFY_GM= "NOTIFY_GM"
+export class DataSecurity {
 
-}
+	encryptor: Encryptor;
+	promises : Map<string, Promise<string>>;
 
-interface ChangePayload {
-	thing_id: string,
-		type: "Actor" | "Item",
-		changes: FoundryChangeLog,
-		options: Object,
-		userId: string
-}
+	static instance: DataSecurity;
 
-export class ChangeLogger {
-	static logFilePath : string = "";
-	static folder : string;
-	static log: ChangeGroup[];
-
-	static async init() {
-		const game = getGame();
-		Hooks.on("preUpdateActor", this.onAnyPreUpdate.bind(this));
-		Hooks.on("preUpdateItem", this.onAnyPreUpdate.bind(this));
-		if (!game.user!.isGM)
-			return;
-		await StorageManager.initSource();
-		try {
-			this.log = await StorageManager.readChanges();
-			console.log("Log Loaded Successfully");
-		} catch (e) {
-			this.log = [];
-			console.error(e);
-		}
-		Sockets.addHandler(SocketCommand.NOTIFY_GM, this.onGMNotify.bind(this));
+	static init() {
+		this.instance = new DataSecurity("Test Key");
+		console.log("Data Security initialized");
 	}
 
-	static async notifyGM (thing: Item | Actor, changes: FoundryChangeLog, options: {}, userId: string) {
-		//TODO: need to socket over to GM
-		const payload : ChangePayload = {
-			thing_id: thing.id!,
-			type: "items" in thing ? "Actor" : "Item",
-			changes,
-			options,
-			userId
-		};
-		// console.log("Notifying GM of changes");
-		Sockets.send(SocketCommand.NOTIFY_GM, payload);
+	constructor (key: string) {
+		this.encryptor = new Encryptor (key);
+		this.promises =new Map();
+		if (getGame().user!.isGM) {
+			Sockets.addHandler( SocketCommand.ENCRYPT_REQUEST, this.onEncryptRequest.bind(this));
+			Sockets.addHandler( SocketCommand.DECRYPT_REQUEST, this.onDecryptRequest.bind(this));
+		}
 	}
 
-	static async onGMNotify (data : ChangePayload) {
-		// console.log("Changes recieved form client");
-		const game = getGame();
-		const {thing_id, type, changes, options, userId} = data;
-		let thing = null;
-		switch (type) {
-			case "Actor":
-				thing = game.actors!.get(thing_id);
-				break;
-			case "Item":
-				thing = game.items!.get(thing_id);
-				break;
-		}
-		if (thing)
-			this.onAnyPreUpdate(thing, changes, options, userId);
+	async onEncryptRequest(data: {data:String}): Promise<string> {
+		return this.encrypt(data.data +"X" );
+	}
+
+	async onDecryptRequest(data: {data:string}): Promise<string> {
+		return this.decrypt(data.data + "X");
+	}
+
+	isEncrypted (data:string) : boolean {
+		return (data.startsWith(ENCRYPTSTARTER));
+	}
+
+	async decrypt( data:string, force: boolean = false) : Promise<string> {
+		if ( !this.isEncrypted(data) && !force ) return data;
+		return await this.#getDecryptedString(data);
+	}
+
+	async #getDecryptedString(data: string) : Promise<string> {
+		if (!getGame().user!.isGM)
+		return await this.sendDecryptRequest(data);
 		else
-			console.warn(`Couldn't find id for ${type} : ${thing_id}`);
+		return this.encryptor.decrypt(data);
 	}
 
-	static async onAnyPreUpdate(thing: Item | Actor, changes: FoundryChangeLog, options: {}, userId: string) {
+	async sendDecryptRequest (data: string) : Promise<string> {
+		//send to GM
+		const ret = await Sockets.simpleTransaction(
+			SocketCommand.DECRYPT_REQUEST,
+			{data},
+			getGame().users!
+			.filter(x=>x.isGM && x.active)
+			.map(x=> x.id)
+		) as string;
+		Debug(ret);
+		return ret;
+	}
+
+	async encrypt (data: string) : Promise<string> {
+		const starter = ENCRYPTSTARTER;
+		const encryptstring = await this.#getEncryptedString(data);
+		return starter + encryptstring;
+	}
+
+	async #getEncryptedString(data: string) : Promise<string> {
 		const game = getGame();
-		if (!game.user!.isGM) {
-			await this.notifyGM(thing, changes, options, userId);
-			return;}
-		const item = thing;
-		if (!item.id) throw new Error("Null Id");
-		let type: "Actor" | "Item";
-		if ("items" in thing)
-			type = "Actor";
-		else type = "Item";
-		const parentId = thing.parent ? thing.parent.id! : "";
-		let CG  = new ChangeGroup(item.id, type, userId, parentId);
-		if (changes.system) {
-			const oldS = item.system;
-			const newS = changes.system;
-			const list = this.getChangeGroup(oldS, newS, userId, item.id, type);
-			CG.merge(list);
-		}
-		if (changes.name) {
-			const oldN = item.name;
-			const newN = changes.name;
-			CG.add("name", oldN, newN);
-		}
-		this.log.unshift(CG);
-		StorageManager.storeChanges(this.log);
+		if (game.user!.isGM)
+		return await this.sendEncryptRequest(data);
+		else
+		return this.encryptor.encrypt(data);
 	}
 
-	static getChangeGroup(oldData: ArbitraryObject, newData: ArbitraryObject, playerId: string, FoundryDocumentId: string, type: "Actor" | "Item") : ChangeGroup {
-		const changes = this.iterateObject( oldData, newData);
-		const CG = new ChangeGroup( FoundryDocumentId, type, playerId);
-		CG.addChangeEntries(changes);
-		return CG;
-	}
-
-	static iterateObject ( oldData : ArbitraryObject, newData: ArbitraryObject, prefix: String[]  = []) : RecursiveArray<ChangeEntry> {
-		try {
-			return Object.entries(newData)
-				.map( ([key, val]) => {
-					let oldval;
-					try {
-						oldval = oldData[key];
-					} catch (e){
-						console.error(`Problem with key ${key}`);
-						throw e;
-					}
-					if (typeof val == "object" && val) {
-						return this.iterateObject(oldval, newData[key], [...prefix, key]);
-					} else {
-						return {
-							key: [...prefix, key].join("."),
-							oldValue: oldval,
-							newValue: val,
-						};
-					}
-				})
-				.flat(1);
-		} catch (e)  {
-			Debug(oldData,newData, prefix);
-			console.error(e);
-			throw new Error("Problem with iterateObject");
-		}
+	async sendEncryptRequest (data: string) : Promise<string> {
+		//send to GM
+		return await Sockets.simpleTransaction(
+			SocketCommand.ENCRYPT_REQUEST,
+			{data},
+			getGame().users!
+			.filter(x=>x.isGM && x.active)
+			.map(x=> x.id)
+		) as string;
 	}
 
 }
 
-Hooks.on("getSceneControlButtons", function(controls:any) {
-	const game = getGame();
-	let tileControls = controls.find( (x: {name: string}) => x.name === "token");
-	if (game.user!.isGM) {
-		tileControls.tools.push({
-			icon: "fas fa-file",
-			name: "ChangeLog",
-			title: "Change Log",
-			button: true,
-			onClick: () => ChangelogDialog.create()
-		});
+class Encryptor {
+
+	key: string;
+
+	constructor (key: string) {
+		this.key = key;
 	}
-});
 
+	encrypt( data: string) : string {
+		console.log("Encryptor called");
+		return data;
+	}
 
+	decrypt (data: string) : string {
+		console.log("Decryptor called");
+		return data;
 
+	}
+
+}
+
+//@ts-ignore
+window.DataSecurity = DataSecurity;

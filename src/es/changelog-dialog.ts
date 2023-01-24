@@ -1,4 +1,4 @@
-import {ChangeLogger} from "./dataSecurity.js";
+import {ChangeLogger} from "./changeLogger.js";
 import {Debug} from "./debug.js";
 
 let CLDialog: ChangelogDialog | null = null;

@@ -1,9 +1,10 @@
 import { } from "./roller-patch.js";
 import {DiceSecurity} from "./diceSecurity.js";
-import {ChangeLogger} from "./dataSecurity.js";
+import { ChangeLogger } from "./changeLogger.js";
 import {SecuritySettings} from "./security-settings.js";
 import {SecurityHandlebarsStuff} from "./handlebars-stuff.js";
 import {ChangelogDialog} from "./changelog-dialog.js";
+import { DataSecurity } from "./dataSecurity.js";
 
 import {Sockets} from "./foundry-tools.js";
 
@@ -18,6 +19,7 @@ Hooks.on("ready",  () => {
 		DiceSecurity.SecurityInit();
 	if (SecuritySettings.monitorChanges())
 		ChangeLogger.init();
+	DataSecurity.init();
 });
 
 
