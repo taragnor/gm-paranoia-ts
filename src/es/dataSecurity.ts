@@ -1,6 +1,7 @@
 import { getGame, Sockets} from "./foundry-tools.js";
 import {Debug} from "./debug.js";
 import {JournalFixUps} from "./JournalFixups.js";
+import {KeyManager} from "./keymanager.js";
 
 const ENCRYPTSTARTER = "<p>__#ENCRYPTED#__::[v1]</p>";
 
@@ -39,9 +40,10 @@ export class DataSecurity {
 		return "";
 	}
 
-	static init() {
+	static async init() {
+		const key = await KeyManager.getKey();
+		this.instance = new DataSecurity(key);
 		JournalFixUps.apply();
-		this.instance = new DataSecurity("Test Key");
 		console.log("Data Security initialized");
 	}
 
