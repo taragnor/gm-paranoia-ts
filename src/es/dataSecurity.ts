@@ -136,7 +136,32 @@ export class DataSecurity {
 
 	async onDecryptRequest({id,field}: DecryptRequestObj, {sender}:SocketPayload): Promise<string> {
 		//TODO: Check permissions
+		const hasPermission = await this.checkPermissions(sender, id, field);
+		if (!hasPermission) {
+			return "ACCESS DENIED";
+		}
 		return this.decrypt(id, field);
+	}
+
+	async checkPermissions(userId: string, objectId: string, field:string) : Promise<boolean> {
+		const game = getGame();
+		const user = game.users!.get(userId);
+		if (!user) {
+			const msg = `Can't find sender Id ${userId}`;
+			console.warn(msg);
+			throw new Error(msg);
+		}
+		if (user.isGM) {
+			const msg =  `Someone tried to impersonate a GM`;
+			ui.notifications!.warn(msg);
+			console.warn(msg);
+		}
+		const [obj, _data] = await DataSecurity.findData(objectId, field);
+		//@ts-ignore
+		const tester = obj instanceof JournalEntryPage ? obj.parent : obj;
+		if (!tester.testUserPermission(user, "OBSERVER"))
+			return false;
+		return true;
 	}
 
 	isEncrypted (data:string | undefined) : boolean {
