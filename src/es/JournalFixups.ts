@@ -43,11 +43,10 @@ export class JournalFixUps {
 
 			const data = JournalPageSheet.prototype.getData.call(this, options);
 			this._convertFormats(data);
-			console.log(`Pre-Decrypt ${data.document.text.content}`);
+			// console.log(`Pre-Decrypt ${data.document.text.content}`);
 			const content = await DataSecurity.instance.decrypt(data.document.text.content);
-			console.log(`Post-Decrypt ${content}`);
+			// console.log(`Post-Decrypt ${content}`);
 			//This line overwrites it for some reason
-			this.document.etext = {...this.document.text.content, content};
 			this.document.text.content = content;
 			data.editor = {
 				engine: "prosemirror",
@@ -60,29 +59,28 @@ export class JournalFixUps {
 					async: true
 				})
 			};
-			// Debug(data.editor);
-			Debug(this);
+			// Debug(this);
 			return data;
 		}
 
 		const oldUpdate = JournalEntryPage.prototype.update;
 		JournalEntryPage.prototype.update = async function (data: any, context: {}) {
 			if (data["text.content"]) {
-				console.warn("Update Action");
+				// console.warn("Update Action");
 				const content = data["text.content"];
 				if (!DataSecurity.instance.isEncrypted(content)){
-					console.log(`Pre Encrypt : ${content}`);
+					// console.log(`Pre Encrypt : ${content}`);
 					const encrypted = await DataSecurity.instance.encrypt(content);
-					console.log(`PostEncrypt: ${encrypted}`);
-					data["text.content"] = encrypted;
+					// console.log(`PostEncrypt: ${encrypted}`);
+					// data["text.content"] = encrypted;
 				} else {
-					console.log(`Not encrypted: ${data["text.content"]}`);
-					Debug(data["text.content"]);
+					// console.log(`Not encrypted: ${data["text.content"]}`);
+					// Debug(data["text.content"]);
 
 				}
 			} else {
-				console.log("No op Update");
-				Debug(data);
+				// console.log("No op Update");
+				// Debug(data);
 			}
 			return oldUpdate.apply(this, arguments);
 		}
