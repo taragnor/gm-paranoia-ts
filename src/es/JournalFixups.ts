@@ -5,6 +5,22 @@ import {Debug} from "./debug.js";
 export class JournalFixUps {
 
 	static apply() {
+		DataSecurity.setEncryptable( JournalEntryPage, [JournalTextPageSheet], ["text.content"]);
+
+		//D&D test code
+		//@ts-ignore
+		const mainActor = CONFIG.Actor.documentClass;
+		//@ts-ignore
+		const sheet = CONFIG.Actor.sheetClasses.character['dnd5e.ActorSheet5eCharacter'].cls;
+		DataSecurity.setEncryptable(mainActor , [sheet], ["system.details.biography.value", "system.details.biography.public"])
+
+	}
+
+}
+
+function oldSheetApplyFn() : void {
+
+	//@ts-ignore
 		JournalTextPageSheet.prototype.getData = async function (options = {}) : Promise<{}> {
 
 			const data = JournalPageSheet.prototype.getData.call(this, options);
@@ -29,37 +45,37 @@ export class JournalFixUps {
 			// Debug(this);
 			return data;
 		}
-
-		const oldUpdate = JournalEntryPage.prototype.update;
-		JournalEntryPage.prototype.update = async function (data: any, context: {}) {
-			if (data["text.content"]) {
-				// console.warn("Update Action");
-				const content = data["text.content"];
-				if (!DataSecurity.instance.isEncrypted(content)){
-					// console.log(`Pre Encrypt : ${content}`);
-					try {
-					const encrypted = await DataSecurity.instance.encrypt(this.id, "text.content", content);
-					// console.log(`PostEncrypt: ${encrypted}`);
-					data["text.content"] = encrypted;
-					} catch (e) {
-						ui.notifications!.error("Encryption Error");
-						console.log(e);
-					}
-				} else {
-					console.log(`Not encrypted: ${data["text.content"]}`);
-					// Debug(data["text.content"]);
-
-				}
-			} else {
-				// console.log("No op Update");
-				// Debug(data);
-			}
-			return oldUpdate.apply(this, arguments);
-		}
-
-
-	}
-
 }
 
+
+
+function oldApplyFn() : void {
+		// const oldUpdate = JournalEntryPage.prototype.update;
+		// JournalEntryPage.prototype.update = async function (data: any, context: {}) {
+		// 	if (data["text.content"]) {
+		// 		// console.warn("Update Action");
+		// 		const content = data["text.content"];
+		// 		if (!DataSecurity.instance.isEncrypted(content)){
+		// 			// console.log(`Pre Encrypt : ${content}`);
+		// 			try {
+		// 			const encrypted = await DataSecurity.instance.encrypt(this.id, "text.content", content);
+		// 			// console.log(`PostEncrypt: ${encrypted}`);
+		// 			data["text.content"] = encrypted;
+		// 			} catch (e) {
+		// 				ui.notifications!.error("Encryption Error");
+		// 				// console.log(e);
+		// 			}
+		// 		} else {
+		// 			// console.log(`Not encrypted: ${data["text.content"]}`);
+		// 			// Debug(data["text.content"]);
+
+		// 		}
+		// 	} else {
+		// 		// console.log("No op Update");
+		// 		// Debug(data);
+		// 	}
+		// 	return oldUpdate.apply(this, arguments);
+		// }
+
+}
 

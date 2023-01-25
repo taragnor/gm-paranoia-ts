@@ -24,6 +24,8 @@ interface EncryptRequestObj {
 type DecryptTargetObjects = Actor | Item | JournalEntryPage;
 
 
+type AnyItem = ConstructorOf<Item | Actor | JournalEntryPage>;
+type SheetType = ConstructorOf<DocumentSheet>
 
 export class DataSecurity {
 
@@ -41,6 +43,72 @@ export class DataSecurity {
 		JournalFixUps.apply();
 		this.instance = new DataSecurity("Test Key");
 		console.log("Data Security initialized");
+	}
+
+	/** instructs DataSecurity to encrypt the data field on the given data item class and any relevant sheets that use it
+	*/
+	static setEncryptable( baseClass: AnyItem, sheets: SheetType[], fields: string[])  {
+		this.#applyMainItem(baseClass, fields);
+		this.#applySheets(sheets, fields);
+	}
+
+	static #applyMainItem(baseClass: AnyItem, fields: string[]) {
+		const oldUpdate  = baseClass.prototype.update;
+		baseClass.prototype.update =
+			async function (data: any, context: {}) {
+				for (const field of fields) {
+					if (data[field]) {
+						const content = data[field];
+						if (!DataSecurity.instance.isEncrypted(content)){
+							try {
+								const encrypted = await DataSecurity.instance.encrypt(this.id, field, content);
+								data[field] = encrypted;
+							} catch (e) {
+								ui.notifications!.error(`Encryption Error on ${field}`);
+							}
+						}
+					}
+				}
+				return oldUpdate.apply(this, arguments);
+			}
+	}
+
+	static #applySheets(sheets: SheetType[], fields:string[]) {
+		for (let sheet of sheets) {
+			const oldgetData = sheet.prototype.getData;
+			sheet.prototype.getData =
+				async function (this: InstanceType<typeof sheet>, options= {}) {
+					const data = await oldgetData.call(this, options);
+					for (const field of fields) {
+						const item = this.document;
+						if (!item)
+							throw new Error("Couldn't find item on sheet.name");
+						const itemId = item.id;
+						if (!itemId)
+							throw new Error(`Can't get item Id for ${item.name}`);
+						const decryptedContent = await DataSecurity.instance.decrypt(itemId, field)
+						const fieldSplit = field.split(".").reverse();
+						let x : any = item;
+						while (fieldSplit.length > 1) {
+							const str = fieldSplit.pop()!;
+							x = x[str];
+						}
+						const f = fieldSplit.pop();
+						if (!f) throw new Error("Splits empty? not enough fields provided?");
+						x[f] = decryptedContent;
+						if (data.editor) {
+							data.editor.content  = await TextEditor.enrichHTML(decryptedContent, {
+								//@ts-ignore
+								relativeTo: this.object,
+								//@ts-ignore
+								secrets: this.object.isOwner,
+								async: true
+							});
+						}
+						return data;
+					}
+				}
+		}
 	}
 
 	constructor (key: string) {
@@ -150,15 +218,19 @@ export class DataSecurity {
 
 	async sendEncryptRequest (stringToEncrypt: string,objId: string, field:string) : Promise<string> {
 		//send to GM
+		const GMs =	getGame().users!
+		.filter(x=>x.isGM && x.active)
+		.map(x=> x.id);
+		if (GMs.length == 0) return stringToEncrypt;
+		const EncryptRequestObj : EncryptRequestObj =
+		{ id: objId,
+			field,
+			dataString : stringToEncrypt
+		};
 		return await Sockets.simpleTransaction(
 			SocketCommand.ENCRYPT_REQUEST,
-			{ id: objId, 
-				field,
-				dataString : stringToEncrypt
-			} satisfies EncryptRequestObj,
-			getGame().users!
-			.filter(x=>x.isGM && x.active)
-			.map(x=> x.id)
+			EncryptRequestObj,
+			GMs
 		) as string;
 	}
 

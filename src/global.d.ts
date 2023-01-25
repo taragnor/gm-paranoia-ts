@@ -80,18 +80,16 @@ interface AwaitedRoll {
 }
 type statusType = "unused" |"no-report" |  "not found" | "roll_modified" | "roll_used_multiple_times" | "unused_rolls" |  "stale" | "verified" | "already_done" ;
 
-declare class DocumentSheet {
-	getData(options: {}) : Promise<{}>;
-}
+// declare class DocumentSheet {
+// 	getData(options: {}) : Promise<{}>;
+// }
 
 declare class JournalPageSheet {
 	getData(options: {}) : Promise<{}>;
 }
 
-declare class JournalTextPageSheet {
-	getData(options: {}) : Promise<{}>;
-	_getSecretContent(secret ?: any) : string;
-	_updateSecret(secret: any, content: any): void;
+declare class JournalTextPageSheet extends DocumentSheet{
+	// getData(options: {}) : Promise<{}>;
 }
 
 declare class JournalTextTinyMCESheet {
