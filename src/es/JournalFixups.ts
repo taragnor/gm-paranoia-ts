@@ -8,8 +8,7 @@ export class JournalFixUps {
 		DataSecurity.setEncryptable( JournalEntryPage, [JournalTextPageSheet], ["text.content"]);
 	}
 
-}
-//EXPIREMENTAL DOESNT WORK YET
+	//EXPIREMENTAL DOESNT WORK YET
 	static applyDnD() {
 		// D&D test code
 		//@ts-ignore
@@ -21,34 +20,36 @@ export class JournalFixUps {
 	}
 
 
-function oldSheetApplyFn() : void {
-
-	//@ts-ignore
-		JournalTextPageSheet.prototype.getData = async function (options = {}) : Promise<{}> {
-
-			const data = JournalPageSheet.prototype.getData.call(this, options);
-			this._convertFormats(data);
-			// console.log(`Pre-Decrypt ${data.document.text.content}`);
-			const content = await DataSecurity.instance.decrypt(data.document.id, "text.content");
-			// const content = await DataSecurity.instance.decrypt(data.document.text.content);
-			// console.log(`Post-Decrypt ${content}`);
-			//This line overwrites it for some reason
-			this.document.text.content = content;
-			data.editor = {
-				engine: "prosemirror",
-				collaborate: true,
-				//@ts-ignore
-				content: await TextEditor.enrichHTML(content, {
-					//@ts-ignore
-					relativeTo: this.object,
-					secrets: this.object.isOwner,
-					async: true
-				})
-			};
-			// Debug(this);
-			return data;
-		}
 }
+
+//function oldSheetApplyFn() : void {
+
+//	//@ts-ignore
+//		JournalTextPageSheet.prototype.getData = async function (options = {}) : Promise<{}> {
+
+//			const data = JournalPageSheet.prototype.getData.call(this, options);
+//			this._convertFormats(data);
+//			// console.log(`Pre-Decrypt ${data.document.text.content}`);
+//			const content = await DataSecurity.instance.decrypt(data.document.id, "text.content");
+//			// const content = await DataSecurity.instance.decrypt(data.document.text.content);
+//			// console.log(`Post-Decrypt ${content}`);
+//			//This line overwrites it for some reason
+//			this.document.text.content = content;
+//			data.editor = {
+//				engine: "prosemirror",
+//				collaborate: true,
+//				//@ts-ignore
+//				content: await TextEditor.enrichHTML(content, {
+//					//@ts-ignore
+//					relativeTo: this.object,
+//					secrets: this.object.isOwner,
+//					async: true
+//				})
+//			};
+//			// Debug(this);
+//			return data;
+//		}
+//}
 
 
 

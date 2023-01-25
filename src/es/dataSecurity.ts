@@ -78,7 +78,6 @@ export class DataSecurity {
 			const oldgetData = sheet.prototype.getData;
 			sheet.prototype.getData =
 				async function (this: InstanceType<typeof sheet>, options= {}) {
-					console.log(`in main Get Data for ${sheet.name}`);
 					const data = await oldgetData.call(this, options);
 					for (const field of fields) {
 						const item = this.document;
@@ -116,7 +115,6 @@ export class DataSecurity {
 								async: true
 							});
 						}
-						Debug(data);
 						return data;
 					}
 				}
