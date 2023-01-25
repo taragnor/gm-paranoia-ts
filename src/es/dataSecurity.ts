@@ -69,12 +69,13 @@ export class DataSecurity {
 	async decrypt(targetObjId: string, targetObjField: string, force = false) : Promise<string> {
 		try {
 			const [obj, data] = await DataSecurity.findData(targetObjId, targetObjField);
+			if (!data) return "";
 			if ( !this.isEncrypted(data) && !force ) return data;
 			return await this.#getDecryptedString( data, targetObjId, targetObjField);
 		} catch (e) {
 			console.warn(`Error on Decrypt ID#:${targetObjId} and field: ${targetObjField}`);
 			console.log(e);
-			return "";
+			throw e;
 		}
 	}
 
@@ -107,7 +108,7 @@ export class DataSecurity {
 		return await this.#getEncryptedString(data, targetObjId, targetObjField);
 	}
 
-	static async findData(targetObjId: string, targetObjField: string): Promise<[DecryptTargetObjects, string]> {
+	static async findData(targetObjId: string, targetObjField: string): Promise<[DecryptTargetObjects, string | undefined]> {
 		const game = getGame();
 		const obj = game.journal!
 		.map( //@ts-ignore
@@ -128,15 +129,13 @@ export class DataSecurity {
 		.reverse();
 		while (typeof x != "string") {
 			const part = peices.pop();
-			if (!part
-				|| !x
-				|| typeof x != "object"
-			) {
+			if (!part) {
 				Debug(x, obj, targetObjField);
-				throw new Error("Malformed Type")
+				throw new Error(`Malformed Type, no data found at ${targetObjField}`)
 			}
 			x = (x as {[key:string]: unknown})[part];
-
+			if (typeof x == "undefined")
+				return [obj, undefined] ;
 		}
 		return [obj, x];
 	}

@@ -37,9 +37,14 @@ export class JournalFixUps {
 				const content = data["text.content"];
 				if (!DataSecurity.instance.isEncrypted(content)){
 					// console.log(`Pre Encrypt : ${content}`);
+					try {
 					const encrypted = await DataSecurity.instance.encrypt(this.id, "text.content", content);
 					// console.log(`PostEncrypt: ${encrypted}`);
 					data["text.content"] = encrypted;
+					} catch (e) {
+						ui.notifications!.error("Encryption Error");
+						console.log(e);
+					}
 				} else {
 					console.log(`Not encrypted: ${data["text.content"]}`);
 					// Debug(data["text.content"]);
