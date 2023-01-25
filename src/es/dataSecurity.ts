@@ -73,8 +73,7 @@ export class DataSecurity {
 			if ( !this.isEncrypted(data) && !force ) return data;
 			return await this.#getDecryptedString( data, targetObjId, targetObjField);
 		} catch (e) {
-			console.warn(`Error on Decrypt ID#:${targetObjId} and field: ${targetObjField}`);
-			console.log(e);
+			ui.notifications!.error("Error on Decryption");
 			throw e;
 		}
 	}
