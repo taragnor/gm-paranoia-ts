@@ -6,8 +6,12 @@ export class JournalFixUps {
 
 	static apply() {
 		DataSecurity.setEncryptable( JournalEntryPage, [JournalTextPageSheet], ["text.content"]);
+	}
 
-		//D&D test code
+}
+//EXPIREMENTAL DOESNT WORK YET
+	static applyDnD() {
+		// D&D test code
 		//@ts-ignore
 		const mainActor = CONFIG.Actor.documentClass;
 		//@ts-ignore
@@ -16,7 +20,6 @@ export class JournalFixUps {
 
 	}
 
-}
 
 function oldSheetApplyFn() : void {
 

@@ -45,7 +45,7 @@ export class DataSecurity {
 		console.log("Data Security initialized");
 	}
 
-	/** instructs DataSecurity to encrypt the data field on the given data item class and any relevant sheets that use it
+	/** instructs DatjaSecurity to encrypt the data field on the given data item class and any relevant sheets that use it
 	*/
 	static setEncryptable( baseClass: AnyItem, sheets: SheetType[], fields: string[])  {
 		this.#applyMainItem(baseClass, fields);
@@ -78,6 +78,7 @@ export class DataSecurity {
 			const oldgetData = sheet.prototype.getData;
 			sheet.prototype.getData =
 				async function (this: InstanceType<typeof sheet>, options= {}) {
+					console.log(`in main Get Data for ${sheet.name}`);
 					const data = await oldgetData.call(this, options);
 					for (const field of fields) {
 						const item = this.document;
@@ -89,13 +90,23 @@ export class DataSecurity {
 						const decryptedContent = await DataSecurity.instance.decrypt(itemId, field)
 						const fieldSplit = field.split(".").reverse();
 						let x : any = item;
+						let y : any = data?.actor ?? data?.item;
+						let z : any = data;
 						while (fieldSplit.length > 1) {
 							const str = fieldSplit.pop()!;
 							x = x[str];
+							if (y)
+								y = y[str];
+							if (z)
+								z = z[str];
 						}
 						const f = fieldSplit.pop();
 						if (!f) throw new Error("Splits empty? not enough fields provided?");
 						x[f] = decryptedContent;
+						if (y)
+							y[f] = decryptedContent;
+						if (z)
+							z[f] = decryptedContent;
 						if (data.editor) {
 							data.editor.content  = await TextEditor.enrichHTML(decryptedContent, {
 								//@ts-ignore
@@ -105,6 +116,7 @@ export class DataSecurity {
 								async: true
 							});
 						}
+						Debug(data);
 						return data;
 					}
 				}
