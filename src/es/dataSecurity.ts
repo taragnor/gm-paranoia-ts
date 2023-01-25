@@ -10,6 +10,21 @@ enum SocketCommand{
 		DECRYPT_REQUEST= "DECRYPT-REQUEST",
 }
 
+interface DecryptRequestObj {
+	id: string;
+	field: string;
+};
+
+interface EncryptRequestObj {
+	id: string;
+	field: string;
+	dataString: string
+};
+
+type DecryptTargetObjects = Actor | Item | JournalEntryPage;
+
+
+
 export class DataSecurity {
 
 	encryptor: Encryptor;
@@ -37,12 +52,13 @@ export class DataSecurity {
 		}
 	}
 
-	async onEncryptRequest(data: {data:string}): Promise<string> {
-		return this.encrypt(data.data );
+	async onEncryptRequest({id,field, dataString}: EncryptRequestObj, {sender}: SocketPayload  ): Promise<string> {
+		return this.encrypt(id, field, dataString);
 	}
 
-	async onDecryptRequest(data: {data:string}): Promise<string> {
-		return this.decrypt(data.data );
+	async onDecryptRequest({id,field}: DecryptRequestObj, {sender}:SocketPayload): Promise<string> {
+		//TODO: Check permissions
+		return this.decrypt(id, field);
 	}
 
 	isEncrypted (data:string | undefined) : boolean {
@@ -50,51 +66,98 @@ export class DataSecurity {
 		return (data.startsWith(ENCRYPTSTARTER));
 	}
 
-	async decrypt( data:string, force: boolean = false) : Promise<string> {
-		console.log("Calling Decrypt base");
-		if ( !this.isEncrypted(data) && !force ) return data;
-		return await this.#getDecryptedString(data);
+	async decrypt(targetObjId: string, targetObjField: string, force = false) : Promise<string> {
+		try {
+			const [obj, data] = await DataSecurity.findData(targetObjId, targetObjField);
+			if ( !this.isEncrypted(data) && !force ) return data;
+			return await this.#getDecryptedString( data, targetObjId, targetObjField);
+		} catch (e) {
+			console.warn(`Error on Decrypt ID#:${targetObjId} and field: ${targetObjField}`);
+			console.log(e);
+			return "";
+		}
 	}
 
-	async #getDecryptedString(data: string) : Promise<string> {
+	async #getDecryptedString(data: string, objId : string, field: string) : Promise<string> {
 		if (!getGame().user!.isGM)
-		return await this.sendDecryptRequest(data);
+		return await this.sendDecryptRequest(objId, field);
 		else
 		return this.encryptor.decrypt(data.substring(ENCRYPTSTARTER.length));
 	}
 
-	async sendDecryptRequest (data: string) : Promise<string> {
+	async sendDecryptRequest (objId: string, field: string) : Promise<string> {
 		//send to GM
 		const ret = await Sockets.simpleTransaction(
 			SocketCommand.DECRYPT_REQUEST,
-			{data},
+			{
+				id: objId,
+				field
+			} satisfies DecryptRequestObj,
 			getGame().users!
 			.filter(x=>x.isGM && x.active)
 			.map(x=> x.id)
 		) as string;
-		Debug(ret);
 		return ret;
 	}
 
-	async encrypt (data: string) : Promise<string> {
+	async encrypt (targetObjId: string, targetObjField: string, data: string) : Promise<string> {
+
+		const [obj, _oldData] = await DataSecurity.findData(targetObjId, targetObjField);
 		if (this.isEncrypted(data)) return data;
-		return await this.#getEncryptedString(data);
+		return await this.#getEncryptedString(data, targetObjId, targetObjField);
 	}
 
-	async #getEncryptedString(data: string) : Promise<string> {
+	static async findData(targetObjId: string, targetObjField: string): Promise<[DecryptTargetObjects, string]> {
+		const game = getGame();
+		const obj = game.journal!
+		.map( //@ts-ignore
+			x=> x.pages.contents)
+		.flat(1)
+		.find(x=> x.id == targetObjId)
+		??
+		game.actors!
+		.find(x=> x.id == targetObjId)
+		??
+		game.items!
+		.find(x=> x.id == targetObjId);
+		if (!obj)
+		throw new Error(`Couldn't find ID: ${targetObjId}`);
+		let x : unknown = obj;
+		const peices = targetObjField
+		.split(".")
+		.reverse();
+		while (typeof x != "string") {
+			const part = peices.pop();
+			if (!part
+				|| !x
+				|| typeof x != "object"
+			) {
+				Debug(x, obj, targetObjField);
+				throw new Error("Malformed Type")
+			}
+			x = (x as {[key:string]: unknown})[part];
+
+		}
+		return [obj, x];
+	}
+
+	async #getEncryptedString(data: string, objId: string, field:string) : Promise<string> {
 		const game = getGame();
 		const starter = ENCRYPTSTARTER;
 		if (!game.user!.isGM)
-		return await this.sendEncryptRequest(data);
+		return await this.sendEncryptRequest(data, objId, field);
 		else
 		return starter + this.encryptor.encrypt(data);
 	}
 
-	async sendEncryptRequest (data: string) : Promise<string> {
+	async sendEncryptRequest (stringToEncrypt: string,objId: string, field:string) : Promise<string> {
 		//send to GM
 		return await Sockets.simpleTransaction(
 			SocketCommand.ENCRYPT_REQUEST,
-			{data},
+			{ id: objId, 
+				field,
+				dataString : stringToEncrypt
+			} satisfies EncryptRequestObj,
 			getGame().users!
 			.filter(x=>x.isGM && x.active)
 			.map(x=> x.id)
@@ -111,24 +174,27 @@ class Encryptor {
 		this.#key = key;
 	}
 
-	encrypt( data: string) : string {
-		console.log("Encryptor called");
+	encrypt(data : string) : string {
+		// console.log("Encryptor called");
+		const target = "1" + data +"Z"; //add padding for verification
 		let ret = "";
-		for (let i = 0 ; i < data.length; i++) {
+		for (let i = 0 ; i < target.length; i++) {
 			const keyCode  = this.#key.charCodeAt(i % this.#key.length)!;
-			ret += String.fromCharCode(data.charCodeAt(i) + keyCode);
+			ret += String.fromCharCode(target.charCodeAt(i) + keyCode);
 		}
 		return ret;
 	}
 
 	decrypt (data: string) : string {
-		console.log("Decryptor Full called");
+		// console.log("Decryptor Full called");
 		let ret = "";
 		for (let i = 0 ; i < data.length; i++) {
 			const keyCode  = this.#key.charCodeAt(i % this.#key.length)!;
 			ret += String.fromCharCode(data.charCodeAt(i) - keyCode);
 		}
-		return ret;
+		if (ret.startsWith("1") && ret.endsWith("Z"))
+			return ret.substring(1, ret.length-2);
+		else throw new Error(`Decryption failed: ${data}`);
 	}
 
 }

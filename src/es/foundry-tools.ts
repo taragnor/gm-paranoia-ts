@@ -19,7 +19,7 @@ export function try_localize(str: string) {
 	else return local;
 }
 
-type Handler = (data: Object, replyFn ?: (data:any) => void) => (boolean | Promise<unknown>);
+type Handler = (data: Object, payloadData?: SocketPayload) => (boolean | Promise<unknown>);
 
 declare global {
 
@@ -39,6 +39,8 @@ declare global {
 	}
 }
 
+
+const ERROR_CODE_STRING = "ERROR_ON_TRANSMISSION";
 
 export class Sockets {
 	static handlers: Map<string, Handler[]>;
@@ -96,11 +98,17 @@ export class Sockets {
 			return this.tryTransactions(payload);
 		}
 		for (const handler of handlerArray) {
-			const handlerRet = await handler(data);
+			try {
+			const handlerRet = await handler(data, payload);
 			if (payload.expectReply)
 				this._send(command, handlerRet, [payload.sender], false, payload.num);
 			if (handlerRet)
 				return;
+			} catch (e) {
+				if (payload.expectReply)
+					this._send(command, ERROR_CODE_STRING, [payload.sender], false, payload.num);
+				throw e;
+			}
 		}
 	}
 
@@ -114,7 +122,10 @@ export class Sockets {
 			return;
 		}
 		for (const transaction of transactions) {
-			transaction.resolve(data);
+			if (data != ERROR_CODE_STRING)
+				transaction.resolve(data);
+			else
+				transaction.reject(ERROR_CODE_STRING);
 		}
 		this.transactions.set(command,
 			transactionList.filter(x=> x.num != num));

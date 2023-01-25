@@ -79,3 +79,39 @@ interface AwaitedRoll {
 	reject: (reason:any) => void ;
 }
 type statusType = "unused" |"no-report" |  "not found" | "roll_modified" | "roll_used_multiple_times" | "unused_rolls" |  "stale" | "verified" | "already_done" ;
+
+declare class DocumentSheet {
+	getData(options: {}) : Promise<{}>;
+}
+
+declare class JournalPageSheet {
+	getData(options: {}) : Promise<{}>;
+}
+
+declare class JournalTextPageSheet {
+	getData(options: {}) : Promise<{}>;
+	_getSecretContent(secret ?: any) : string;
+	_updateSecret(secret: any, content: any): void;
+}
+
+declare class JournalTextTinyMCESheet {
+	getData(options: {}) : Promise<{}>;
+}
+
+declare class JournalEntryPage {
+	update( data: {}, context: {}) : void;
+}
+
+
+
+declare global {
+	interface Window {
+		DocumentSheet: typeof DocumentSheet;
+		JournalPageSheet: typeof JournalPageSheet;
+		JournalTextPageSheet: typeof JournalTextPageSheet;
+		JournalEntryPage: typeof JournalEntryPage;
+		JournalTextTinyMCESheet: typeof JournalTextTinyMCESheet;
+	}
+
+}
+
