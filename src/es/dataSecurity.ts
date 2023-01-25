@@ -2,7 +2,7 @@ import { getGame, Sockets} from "./foundry-tools.js";
 import {Debug} from "./debug.js";
 import {JournalFixUps} from "./JournalFixups.js";
 
-const ENCRYPTSTARTER = "__#ENCRYPTED#__::[v1]";
+const ENCRYPTSTARTER = "<p>__#ENCRYPTED#__::[v1]</p>";
 
 
 enum SocketCommand{
@@ -37,12 +37,12 @@ export class DataSecurity {
 		}
 	}
 
-	async onEncryptRequest(data: {data:String}): Promise<string> {
-		return this.encrypt(data.data +"X" );
+	async onEncryptRequest(data: {data:string}): Promise<string> {
+		return this.encrypt(data.data );
 	}
 
 	async onDecryptRequest(data: {data:string}): Promise<string> {
-		return this.decrypt(data.data + "X");
+		return this.decrypt(data.data );
 	}
 
 	isEncrypted (data:string | undefined) : boolean {
@@ -78,17 +78,16 @@ export class DataSecurity {
 
 	async encrypt (data: string) : Promise<string> {
 		if (this.isEncrypted(data)) return data;
-		const starter = ENCRYPTSTARTER;
-		const encryptstring = await this.#getEncryptedString(data);
-		return starter + encryptstring;
+		return await this.#getEncryptedString(data);
 	}
 
 	async #getEncryptedString(data: string) : Promise<string> {
 		const game = getGame();
+		const starter = ENCRYPTSTARTER;
 		if (!game.user!.isGM)
 		return await this.sendEncryptRequest(data);
 		else
-		return this.encryptor.encrypt(data);
+		return starter + this.encryptor.encrypt(data);
 	}
 
 	async sendEncryptRequest (data: string) : Promise<string> {
