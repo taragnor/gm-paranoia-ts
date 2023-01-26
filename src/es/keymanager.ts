@@ -4,7 +4,7 @@ const keylocation = "gm-paranoia-key";
 
 export class KeyManager {
 
-	static async getKey() : Promise<string> {
+	static async getKey(validator: (key:string) => Promise<boolean>) : Promise<string> {
 		const user = getGame().user;
 		if (!user) {
 			throw new Error("User Not present for some reason");
@@ -16,9 +16,16 @@ export class KeyManager {
 		let key = await this.retrieveKeyFromStorage();
 		if (key) return key;
 		try {
-			key = await this.promptUser();
-			if (!key) {
-				throw new Error("User did not provide encyrption key");
+			while (!key) {
+				key = await this.promptUser();
+				if (!key) {
+					throw new Error("User did not provide encyrption key");
+				}
+				const isValid = await validator(key);
+				if (!isValid) {
+					ui.notifications!.warn("Key Conflicts with existing Encrypted Values");
+					key = null;
+				}
 			}
 		} catch (e) {
 			ui.notifications!.error("No Key entered, Encryption non-functional")
@@ -73,7 +80,7 @@ export class KeyManager {
 
 
 	static #validateKey(key: string) {
-		const tester = new 
+		//TODO: make sure key doesn't conflict with already encrypted values, check all values
 	}
 
 }

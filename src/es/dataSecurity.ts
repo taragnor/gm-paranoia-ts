@@ -28,6 +28,8 @@ type DecryptTargetObjects = Actor | Item | JournalEntryPage;
 type AnyItem = ConstructorOf<Item | Actor | JournalEntryPage>;
 type SheetType = ConstructorOf<DocumentSheet>
 
+	const HOOK_NAME= "encryptionPreEnable";
+
 export class DataSecurity {
 
 	encryptor: Encryptor;
@@ -45,18 +47,18 @@ export class DataSecurity {
 	static async init() {
 		const game = getGame();
 		this.encryptables = new Map();
-		Hooks.on("encyrptionPreEnable", (dataSecurity: typeof DataSecurity) => {
+		Hooks.on(HOOK_NAME, (dataSecurity: typeof DataSecurity) => {
 			JournalFixUps.apply(dataSecurity);
 		});
 		try {
-			await Hooks.callAll("encryptionPreEnable", this);
+			await Hooks.callAll(HOOK_NAME, this);
 		}
 		catch (e) {
 			ui.notifications!.error("Error running hooks on encryptionPreEnable");
 			console.error(e);
 		}
 		if (game.user!.isGM) {
-			const key = await KeyManager.getKey();
+			const key = await KeyManager.getKey((key:string) => this.validateKey(key));
 			this._instance = new DataSecurity(key);
 		}
 		console.log("Data Security initialized");
@@ -243,21 +245,23 @@ export class DataSecurity {
 		.find(x=> x.id == targetObjId);
 		if (!obj)
 		throw new Error(`Couldn't find ID: ${targetObjId}`);
-		let x : unknown = obj;
-		const peices = targetObjField
-		.split(".")
-		.reverse();
-		while (typeof x != "string") {
-			const part = peices.pop();
-			if (!part) {
-				Debug(x, obj, targetObjField);
-				throw new Error(`Malformed Type, no data found at ${targetObjField}`)
-			}
-			x = (x as {[key:string]: unknown})[part];
-			if (typeof x == "undefined")
-				return [obj, undefined] ;
-		}
-		return [obj, x];
+		const fieldValue = this.getFieldValue(obj, targetObjField);
+		return [obj, fieldValue];
+		// let x : unknown = obj;
+		// const peices = targetObjField
+		// .split(".")
+		// .reverse();
+		// while (typeof x != "string") {
+		// 	const part = peices.pop();
+		// 	if (!part) {
+		// 		Debug(x, obj, targetObjField);
+		// 		throw new Error(`Malformed Type, no data found at ${targetObjField}`)
+		// 	}
+		// 	x = (x as {[key:string]: unknown})[part];
+			// if (typeof x == "undefined")
+			// 	return [obj, undefined] ;
+		// }
+		// return [obj, x];
 	}
 
 	async #getEncryptedString(data: string, objId: string, field:string) : Promise<string> {
@@ -287,7 +291,42 @@ export class DataSecurity {
 		) as string;
 	}
 
+	static async getAllEncryptedValues() : Promise<[DecryptTargetObjects, string[]][]> {
+		return [];
+
+	}
+
+	static async validateKey(potentialKey: string) : Promise<boolean> {
+		const encryptor = new Encryptor(potentialKey);
+		const encyrptables : [DecryptTargetObjects, string[]][]  = await this.getAllEncryptedValues();
+		return encyrptables.every( o => {
+			return false;
+		});
+	}
+
+	static getFieldValue(item: AnyItem, field:string) : string | undefined {
+		let x : unknown  = item;
+		const peices = field
+			.split(".")
+			.reverse();
+		while (typeof x != "string") {
+			const part = peices.pop();
+			if (!part) {
+				Debug(x, item,field);
+				throw new Error(`Malformed Type, no data found at ${field}`)
+			}
+			x = (x as {[key:string]: unknown})[part];
+			if (typeof x == "undefined")
+				return undefined ;
+			if (typeof x == "number")
+				throw new Error(`Field ${field} is a number, numeric encyrption not yet allowed`);
+		}
+		return x;
+	}
 }
+
+
+
 
 class Encryptor {
 
