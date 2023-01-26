@@ -4,7 +4,7 @@ import {Debug} from "./debug.js";
 
 export class JournalFixUps {
 
-	static apply() {
+	static apply(dataSecurity: typeof DataSecurity) {
 		DataSecurity.setEncryptable( JournalEntryPage, [JournalTextPageSheet], ["text.content"]);
 	}
 
@@ -18,6 +18,7 @@ export class JournalFixUps {
 		DataSecurity.setEncryptable(mainActor , [sheet], ["system.details.biography.value", "system.details.biography.public"])
 
 	}
+
 
 
 }

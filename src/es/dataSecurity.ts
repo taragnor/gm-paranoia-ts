@@ -1,4 +1,4 @@
-import { getGame, Sockets} from "./foundry-tools.js";
+import { getGame, Sockets, localize} from "./foundry-tools.js";
 import {Debug} from "./debug.js";
 import {JournalFixUps} from "./JournalFixups.js";
 import {KeyManager} from "./keymanager.js";
@@ -33,23 +33,39 @@ export class DataSecurity {
 	encryptor: Encryptor;
 	promises : Map<string, Promise<string>>;
 
-	static instance: DataSecurity;
+	static _instance: DataSecurity;
+	static encryptables: Map<ConstructorOf<DecryptTargetObjects>, string[]>;
 
-	static async keyPrompt() : Promise<string> {
-		//TODO: finish this
-		return "";
+
+	static get instance() {
+		return this._instance;
+
 	}
 
 	static async init() {
-		const key = await KeyManager.getKey();
-		this.instance = new DataSecurity(key);
-		JournalFixUps.apply();
+		const game = getGame();
+		this.encryptables = new Map();
+		Hooks.on("encyrptionPreEnable", (dataSecurity: typeof DataSecurity) => {
+			JournalFixUps.apply(dataSecurity);
+		});
+		try {
+			await Hooks.callAll("encryptionPreEnable", this);
+		}
+		catch (e) {
+			ui.notifications!.error("Error running hooks on encryptionPreEnable");
+			console.error(e);
+		}
+		if (game.user!.isGM) {
+			const key = await KeyManager.getKey();
+			this._instance = new DataSecurity(key);
+		}
 		console.log("Data Security initialized");
 	}
 
 	/** instructs DatjaSecurity to encrypt the data field on the given data item class and any relevant sheets that use it
 	*/
 	static setEncryptable( baseClass: AnyItem, sheets: SheetType[], fields: string[])  {
+		this.encryptables.set(baseClass, fields);
 		this.#applyMainItem(baseClass, fields);
 		this.#applySheets(sheets, fields);
 	}
@@ -283,6 +299,11 @@ class Encryptor {
 
 	encrypt(data : string) : string {
 		// console.log("Encryptor called");
+		if (this.#key.length == 0){
+			const msg = localize("TaragnorSecurity.encryption.error.missingKey");
+			ui.notifications!.error(msg)
+			throw new Error(msg);
+		}
 		const target = "1" + data +"Z"; //add padding for verification
 		let ret = "";
 		for (let i = 0 ; i < target.length; i++) {
@@ -294,6 +315,11 @@ class Encryptor {
 
 	decrypt (data: string) : string {
 		// console.log("Decryptor Full called");
+		if (this.#key.length == 0) {
+			const msg = localize("TaragnorSecurity.encryption.error.missingKey");
+			ui.notifications!.error(msg)
+			throw new Error(msg);
+		}
 		let ret = "";
 		for (let i = 0 ; i < data.length; i++) {
 			const keyCode  = this.#key.charCodeAt(i % this.#key.length)!;

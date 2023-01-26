@@ -15,6 +15,11 @@
 "TaragnorSecurity.diceProtection.reasons.verified":  "Verified",
 "TaragnorSecurity.diceProtection.reasons.roll_modified":  "Roll Modification Detected",
 "TaragnorSecurity.diceProtection.reasons.not_found":  "Roll Not Found",
-"TaragnorSecurity.diceProtection.reasons.used_multiple_times": "Roll Used Multiple Times"
+"TaragnorSecurity.diceProtection.reasons.used_multiple_times": "Roll Used Multiple Times",
+
+"TaragnorSecurity.encryption.keyPrompt.label" : " Enter Encyrption Key",
+"TaragnorSecurity.encryption.keyPrompt.message" : "Note: Keys must match",
+"TaragnorSecurity.encryption.error.missingKey": "Encryption Key Missing"
+
 
 }
