@@ -59,7 +59,6 @@ export class DataSecurity {
 		}
 		if (game.user!.isGM) {
 			const key = await KeyManager.getKey((key:string) => this.validateKey(key));
-			console.log(`Key set to ${key}`);
 			this._instance = new DataSecurity(key);
 		}
 		console.log("Data Security initialized");
@@ -402,16 +401,27 @@ class Encryptor {
 	}
 
 
+	getEncryptionVersion(data:string) : number {
+		//will be used in the future to decode the data in ECRYPTSTARTER TO GET THE VERSION NUMBER
+		return 1;
+	}
+
 	static isEncrypted (data:string | undefined) : boolean {
 		if (!data) return false;
 		return (data.startsWith(ENCRYPTSTARTER));
 	}
 
 	decrypt (data:string) : string {
-		return this._decrypt(data.substring(ENCRYPTSTARTER.length));
+		const version = this.getEncryptionVersion(data);
+		switch (version) {
+			case 1:
+				return this._decrypt1(data.substring(ENCRYPTSTARTER.length));
+			default:
+				throw new Error("Unrecognized Version number: ${version}");
+		}
 	}
 
-	private _decrypt (data: string) : string {
+	private _decrypt1 (data: string) : string {
 		// console.log("Decryptor Full called");
 		if (this.#key.length == 0) {
 			const msg = localize("TaragnorSecurity.encryption.error.missingKey");
