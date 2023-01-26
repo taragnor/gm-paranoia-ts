@@ -27,9 +27,12 @@ export class KeyManager {
 					key = null;
 				}
 			}
-		} catch (e) {
-			ui.notifications!.error("No Key entered, Encryption non-functional")
-			return "";
+		} catch (e: unknown) {
+			if (e instanceof Error) {
+				ui.notifications!.error(e.message)
+				return "";
+			}
+			throw e;
 		}
 		this.storeKey(key);
 		return key;
@@ -45,6 +48,10 @@ export class KeyManager {
 		ui.notifications!.notify("Key stored");
 	}
 
+	static async clearKey() : Promise<void> {
+		localStorage.removeItem(keylocation)
+	}
+
 	static async promptUser() : Promise<string | null> {
 		const templateData = {};
 		const html = await renderTemplate(`modules/gm-paranoia-taragnor/hbs/key-prompt.hbs`, templateData);
@@ -52,7 +59,13 @@ export class KeyManager {
 			const dialog = new Dialog({
 				title: "Enter Encryption Key",
 				content: html,
+				default: "enter",
 				buttons: {
+					cancel: {
+						icon: `<i class="fas fa-times"></i>`,
+						label: "Cancel",
+						callback: () => resolve(null)
+					},
 					enter:  {
 						icon: `<i class="fas fa-check"></i>`,
 						label: "Confirm",
@@ -64,11 +77,6 @@ export class KeyManager {
 								reject("Bad Data");
 						}
 					},
-					cancel: {
-						icon: `<i class="fas fa-times"></i>`,
-						label: "Cancel",
-						callback: () => resolve(null)
-					}
 				},
 				close: function () {
 					resolve(null);
@@ -78,9 +86,5 @@ export class KeyManager {
 		});
 	}
 
-
-	static #validateKey(key: string) {
-		//TODO: make sure key doesn't conflict with already encrypted values, check all values
-	}
 
 }

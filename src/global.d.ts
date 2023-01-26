@@ -100,6 +100,12 @@ declare class JournalEntryPage {
 	update( data: {}, context: {}) : void;
 }
 
+interface Actor {
+	collectionName: string;
+}
+interface Item {
+	collectionName: string;
+}
 
 
 declare global {

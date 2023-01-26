@@ -59,6 +59,7 @@ export class DataSecurity {
 		}
 		if (game.user!.isGM) {
 			const key = await KeyManager.getKey((key:string) => this.validateKey(key));
+			console.log(`Key set to ${key}`);
 			this._instance = new DataSecurity(key);
 		}
 		console.log("Data Security initialized");
@@ -79,7 +80,7 @@ export class DataSecurity {
 				for (const field of fields) {
 					if (data[field]) {
 						const content = data[field];
-						if (!DataSecurity.instance.isEncrypted(content)){
+						if (!DataSecurity.isEncrypted(content)){
 							try {
 								const encrypted = await DataSecurity.instance.encrypt(this.id, field, content);
 								data[field] = encrypted;
@@ -172,7 +173,7 @@ export class DataSecurity {
 		return true;
 	}
 
-	isEncrypted (data:string | undefined) : boolean {
+	static isEncrypted (data:string | undefined) : boolean {
 		if (!data) return false;
 		return (data.startsWith(ENCRYPTSTARTER));
 	}
@@ -181,7 +182,7 @@ export class DataSecurity {
 		try {
 			const [obj, data] = await DataSecurity.findData(targetObjId, targetObjField);
 			if (!data) return "";
-			if ( !this.isEncrypted(data) && !force ) return data;
+			if ( !DataSecurity.isEncrypted(data) && !force ) return data;
 			return await this.#getDecryptedString( data, targetObjId, targetObjField);
 		} catch (e) {
 			ui.notifications!.error("Error on Decryption");
@@ -214,7 +215,7 @@ export class DataSecurity {
 	async encrypt (targetObjId: string, targetObjField: string, data: string) : Promise<string> {
 
 		const [obj, _oldData] = await DataSecurity.findData(targetObjId, targetObjField);
-		if (this.isEncrypted(data)) return data;
+		if (DataSecurity.isEncrypted(data)) return data;
 		return await this.#getEncryptedString(data, targetObjId, targetObjField);
 	}
 
@@ -264,17 +265,71 @@ export class DataSecurity {
 		) as string;
 	}
 
-	static async getAllEncryptedValues() : Promise<[DecryptTargetObjects, string[]][]> {
-		return [];
-
+	static async getAllEncryptedValues() : Promise<(readonly [DecryptTargetObjects[], string[] ]) []> {
+		const game = getGame();
+		const x = this.encryptables
+		.entries();
+		const actors = game.actors!.map(x=>x);
+		let xArr = [];
+		for (const o of x) {
+			xArr.push(o);
+		}
+		const data : (readonly [DecryptTargetObjects[], string[]])[] =
+		xArr.map( ([cls, fields]) => {
+			if ((cls as any).collectionName =="actors") {
+				const ret :readonly [DecryptTargetObjects[], string[]]   = [actors, fields] as const;
+				return ret;
+			}
+			else if ((cls as any).collectionName == "items") {
+				const x= game.items!.map(x=>x) as Item[];
+				const items = actors.map(x=> {
+					const items=  x.items.map(x=>x);
+					return items;
+				}).flat(1);
+				const item = items[0];
+				const combined =  x.concat(items);
+				const ret :readonly [DecryptTargetObjects[], string[]] = [combined, fields] as const;
+				return ret;
+			}
+			else if ((cls as unknown) == JournalEntryPage) {
+				const pages= game.journal!.contents
+					.map(x=> {
+						const pageArr = (x as any).pages.contents as JournalEntryPage[];
+						return pageArr;
+					})
+					.flat(1);
+				const ret : readonly [DecryptTargetObjects[], string[]] = [pages, fields] as const;
+				return ret;
+			} else {
+				Debug(cls);
+				throw new Error(`Unknown type ${(cls as any)?.name}`);
+			}
+		});
+		return data;
 	}
 
 	static async validateKey(potentialKey: string) : Promise<boolean> {
 		const encryptor = new Encryptor(potentialKey);
-		const encyrptables : [DecryptTargetObjects, string[]][]  = await this.getAllEncryptedValues();
-		return encyrptables.every( o => {
-			return false;
+		const encryptables = await this.getAllEncryptedValues();
+		return encryptables.every( ([dataObj, fields]) => {
+			return dataObj.every( (obj) => {
+				return fields.every( field => {
+					const data =  DataSecurity.getFieldValue(obj, field);
+					if (!data || !DataSecurity.isEncrypted(data))
+						return true;
+					try { encryptor.decrypt(data.substring(ENCRYPTSTARTER.length));}
+					catch (e) {
+						console.log(e);
+						return false;
+					}
+					return true;
+				});
+			});
 		});
+	}
+
+	static async resetKey() {
+		await KeyManager.clearKey();
 	}
 
 	static getFieldValue(item: {[key:string]:any}, field:string) : string | undefined {
