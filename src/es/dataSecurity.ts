@@ -111,21 +111,9 @@ export class DataSecurity {
 						let x : any = item;
 						let y : any = data?.actor ?? data?.item;
 						let z : any = data;
-						while (fieldSplit.length > 1) {
-							const str = fieldSplit.pop()!;
-							x = x[str];
-							if (y)
-								y = y[str];
-							if (z)
-								z = z[str];
-						}
-						const f = fieldSplit.pop();
-						if (!f) throw new Error("Splits empty? not enough fields provided?");
-						x[f] = decryptedContent;
-						if (y)
-							y[f] = decryptedContent;
-						if (z)
-							z[f] = decryptedContent;
+						DataSecurity.setFieldValue(x, field, decryptedContent);
+						DataSecurity.setFieldValue(y, field, decryptedContent);
+						DataSecurity.setFieldValue(z, field, decryptedContent);
 						if (data.editor) {
 							data.editor.content  = await TextEditor.enrichHTML(decryptedContent, {
 								//@ts-ignore
@@ -247,21 +235,6 @@ export class DataSecurity {
 		throw new Error(`Couldn't find ID: ${targetObjId}`);
 		const fieldValue = this.getFieldValue(obj, targetObjField);
 		return [obj, fieldValue];
-		// let x : unknown = obj;
-		// const peices = targetObjField
-		// .split(".")
-		// .reverse();
-		// while (typeof x != "string") {
-		// 	const part = peices.pop();
-		// 	if (!part) {
-		// 		Debug(x, obj, targetObjField);
-		// 		throw new Error(`Malformed Type, no data found at ${targetObjField}`)
-		// 	}
-		// 	x = (x as {[key:string]: unknown})[part];
-			// if (typeof x == "undefined")
-			// 	return [obj, undefined] ;
-		// }
-		// return [obj, x];
 	}
 
 	async #getEncryptedString(data: string, objId: string, field:string) : Promise<string> {
@@ -304,7 +277,7 @@ export class DataSecurity {
 		});
 	}
 
-	static getFieldValue(item: AnyItem, field:string) : string | undefined {
+	static getFieldValue(item: {[key:string]:any}, field:string) : string | undefined {
 		let x : unknown  = item;
 		const peices = field
 			.split(".")
@@ -323,10 +296,29 @@ export class DataSecurity {
 		}
 		return x;
 	}
+
+	static setFieldValue(item: {[key:string]:any} , field:string, newVal: string) : boolean {
+		const fieldSplit = field
+			.split(".")
+			.reverse();
+		let x : any = item;
+		while (fieldSplit.length > 1) {
+			if (typeof x != "object")
+				return false;
+			const str = fieldSplit.pop()!;
+			x = x[str];
+		}
+		const f = fieldSplit.pop();
+		if (!f) {
+			// throw new Error("Splits empty? not enough fields provided?");
+			return false;
+		}
+		if (typeof x != "object")
+			return false;
+		x[f] = newVal;
+		return true;
+	}
 }
-
-
-
 
 class Encryptor {
 
