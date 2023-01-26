@@ -174,8 +174,7 @@ export class DataSecurity {
 	}
 
 	static isEncrypted (data:string | undefined) : boolean {
-		if (!data) return false;
-		return (data.startsWith(ENCRYPTSTARTER));
+		return Encryptor.isEncrypted(data);
 	}
 
 	async decrypt(targetObjId: string, targetObjField: string, force = false) : Promise<string> {
@@ -194,7 +193,7 @@ export class DataSecurity {
 		if (!getGame().user!.isGM)
 		return await this.sendDecryptRequest(objId, field);
 		else
-		return this.encryptor.decrypt(data.substring(ENCRYPTSTARTER.length));
+		return this.encryptor.decrypt(data);
 	}
 
 	async sendDecryptRequest (objId: string, field: string) : Promise<string> {
@@ -240,11 +239,10 @@ export class DataSecurity {
 
 	async #getEncryptedString(data: string, objId: string, field:string) : Promise<string> {
 		const game = getGame();
-		const starter = ENCRYPTSTARTER;
 		if (!game.user!.isGM)
 		return await this.sendEncryptRequest(data, objId, field);
 		else
-		return starter + this.encryptor.encrypt(data);
+		return this.encryptor.encrypt(data);
 	}
 
 	async sendEncryptRequest (stringToEncrypt: string,objId: string, field:string) : Promise<string> {
@@ -317,7 +315,7 @@ export class DataSecurity {
 					const data =  DataSecurity.getFieldValue(obj, field);
 					if (!data || !DataSecurity.isEncrypted(data))
 						return true;
-					try { encryptor.decrypt(data.substring(ENCRYPTSTARTER.length));}
+					try { encryptor.decrypt(data);}
 					catch (e) {
 						console.log(e);
 						return false;
@@ -383,7 +381,11 @@ class Encryptor {
 		this.#key = key;
 	}
 
-	encrypt(data : string) : string {
+	encrypt (data: string) : string {
+		return ENCRYPTSTARTER + this._encrypt(data);
+	}
+
+	private _encrypt(data : string) : string {
 		// console.log("Encryptor called");
 		if (this.#key.length == 0){
 			const msg = localize("TaragnorSecurity.encryption.error.missingKey");
@@ -399,7 +401,17 @@ class Encryptor {
 		return ret;
 	}
 
-	decrypt (data: string) : string {
+
+	static isEncrypted (data:string | undefined) : boolean {
+		if (!data) return false;
+		return (data.startsWith(ENCRYPTSTARTER));
+	}
+
+	decrypt (data:string) : string {
+		return this._decrypt(data.substring(ENCRYPTSTARTER.length));
+	}
+
+	private _decrypt (data: string) : string {
 		// console.log("Decryptor Full called");
 		if (this.#key.length == 0) {
 			const msg = localize("TaragnorSecurity.encryption.error.missingKey");

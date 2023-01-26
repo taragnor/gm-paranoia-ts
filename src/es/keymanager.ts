@@ -1,4 +1,4 @@
-import { getGame } from "./foundry-tools.js";
+import { getGame , localize} from "./foundry-tools.js";
 
 const keylocation = "gm-paranoia-key";
 
@@ -19,12 +19,17 @@ export class KeyManager {
 			while (!key) {
 				key = await this.promptUser();
 				if (!key) {
-					throw new Error("User did not provide encyrption key");
+					const msg = localize("TaragnorSecurity.encryption.error.noKeyProvided")
+					ui.notifications!.warn(msg);
+					key = null;
+					continue;
 				}
 				const isValid = await validator(key);
 				if (!isValid) {
-					ui.notifications!.warn("Key Conflicts with existing Encrypted Values");
+					const msg = localize("TaragnorSecurity.encryption.error.wrongKey" );
+					ui.notifications!.warn(msg);
 					key = null;
+					continue;
 				}
 			}
 		} catch (e: unknown) {

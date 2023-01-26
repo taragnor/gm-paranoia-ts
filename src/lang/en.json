@@ -4,6 +4,8 @@
 "TaragnorSecurity.settings.monitorChanges.hint": "Log Changes made to Items and Actors",
 "TaragnorSecurity.settings.monitorRolls.name" : "Dice Protection",
 "TaragnorSecurity.settings.monitorRolls.hint" : "Monitor and Verify Dice Rolls",
+"TaragnorSecurity.settings.encryptData.name" : "Use Data Encryption",
+"TaragnorSecurity.settings.encryptData.hint" : "Encrypts Journal Entries and possible more (assuming system supports it)",
 
 "TaragnorSecurity.diceProtection.report.verified0" : "Roll Verified",
 "TaragnorSecurity.diceProtection.report.verified1" : "No Cheating",
@@ -17,9 +19,10 @@
 "TaragnorSecurity.diceProtection.reasons.not_found":  "Roll Not Found",
 "TaragnorSecurity.diceProtection.reasons.used_multiple_times": "Roll Used Multiple Times",
 
-"TaragnorSecurity.encryption.keyPrompt.label" : " Enter Encyrption Key",
-"TaragnorSecurity.encryption.keyPrompt.message" : "Note: Keys must match",
-"TaragnorSecurity.encryption.error.missingKey": "Encryption Key Missing"
+"TaragnorSecurity.encryption.keyPrompt.label" : " Enter Encryption Key",
+"TaragnorSecurity.encryption.keyPrompt.message" : "Note: if data is already encrypted in this world, you must provide the same key",
+"TaragnorSecurity.encryption.error.missingKey": "Encryption Key Missing",
 
-
+"TaragnorSecurity.encryption.error.wrongKey" : "Key does not work on existing encrypted data! Must enter same key used to encrypt or data will be lost!",
+"TaragnorSecurity.encryption.error.noKeyProvided" : "You must select a key to use encryption feature"
 }

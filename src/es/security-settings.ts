@@ -15,7 +15,7 @@ export class SecuritySettings {
 			//@ts-ignore
 			restrict: true,
 			onChange: _ => {
-				setTimeout(() =>  window.location.reload(), 500);
+				this.delayedReload();
 			}
 		});
 
@@ -29,7 +29,21 @@ export class SecuritySettings {
 			//@ts-ignore
 			restrict: true,
 			onChange: _ => {
-				setTimeout(() =>  window.location.reload(), 500);
+				this.delayedReload();
+			}
+		});
+
+		game.settings.register(this.SYSTEM_NAME, "useEncryption", {
+			name: localize("TaragnorSecurity.settings.encryptData.name"),
+			hint: localize("TaragnorSecurity.settings.encryptData.hint"),
+			scope: "world",
+			config: true,
+			type: Boolean,
+			default: false,
+			//@ts-ignore
+			restrict: true,
+			onChange: _ => {
+				this.delayedReload();
 			}
 		});
 
@@ -53,6 +67,22 @@ export class SecuritySettings {
 
 	static monitorDiceRolls() : boolean {
 		return this.getBoolean("monitorRolls");
+	}
+
+	static useEncryption() : boolean {
+		return this.getBoolean("useEncryption");
+	}
+
+	static isDelayedReload = false;
+
+	static delayedReload() {
+		if (!this.isDelayedReload) {
+			const msg = "Reload Required";
+			if (ui.notifications)
+				ui.notifications.notify(msg);
+			setTimeout(() =>  window.location.reload(), 2000);
+		}
+		this.isDelayedReload= true;
 	}
 
 }
