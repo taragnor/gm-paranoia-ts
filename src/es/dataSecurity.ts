@@ -414,9 +414,29 @@ export class DataSecurity {
 				}
 			})
 		);
-		let x : DocumentModificationContext;
+	}
 
-
+	//* update encyrption style to newest settings
+	async refreshEncryption () {
+		const encryptables = await DataSecurity.getAllEncryptables();
+		await Promise.all(
+			encryptables.map( async ([obj, field]) => {
+				const data = DataSecurity.getFieldValue(obj, field);
+				if (!obj.id || !data) return;
+				const shouldBeEncyrpted = this.isEncryptableObject(obj);
+				const isEncrypted = DataSecurity.isEncrypted(data);
+				if (shouldBeEncyrpted && !isEncrypted) {
+					const eData = await this.encrypt(obj.id, field, data);
+					const updateObj : {[k: string] : string} ={};
+					updateObj[field] = eData;
+					await obj.update(updateObj, {ignoreEncrypt:true});
+				}  else if (!shouldBeEncyrpted && isEncrypted) {
+					const eData = await this.decrypt(obj.id, field);
+					const updateObj : {[k: string] : string} ={};
+					updateObj[field] = eData;
+					await obj.update(updateObj, {ignoreEncrypt:true});
+				}
+			}));
 	}
 
 	async decryptAll() {

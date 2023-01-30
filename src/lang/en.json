@@ -10,6 +10,9 @@
 "TaragnorSecurity.settings.encryptData.1" : "Encrypt private data (unviewable by players)",
 "TaragnorSecurity.settings.encryptData.2" : "Encrypt Everything",
 
+"TaragnorSecurity.settings.encryptInProgress" : "Encryption in progress, do not reload the page",
+"TaragnorSecurity.settings.encryptDone" : "Encryption Finished",
+
 "TaragnorSecurity.diceProtection.report.verified0" : "Roll Verified",
 "TaragnorSecurity.diceProtection.report.verified1" : "No Cheating",
 "TaragnorSecurity.diceProtection.report.cheater" : "is a cheater",

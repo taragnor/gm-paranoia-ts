@@ -1,6 +1,8 @@
 import {getGame, localize} from './foundry-tools.js';
+import {DataSecurity} from './dataSecurity.js';
 
 type EncryptionType = keyof typeof SecuritySettings.ENCRYPTIONTYPES;
+
 
 
 export class SecuritySettings {
@@ -59,9 +61,17 @@ export class SecuritySettings {
 			choices: localizedEncyrptionTypes,
 			//@ts-ignore
 			restrict: true,
-			onChange: _ => {
-				// this.delayedReload();
-			}
+			onChange: async (_) => {
+				if (DataSecurity.instance) {
+					this.blockReload = true;
+					const msg = localize ("TaragnorSecurity.settings.encryptInProgress");
+					ui.notifications!.notify(msg);
+					await DataSecurity.instance.refreshEncryption();
+					const msg2 = localize ("TaragnorSecurity.settings.encryptDone");
+					ui.notifications!.notify(msg2);
+					this.blockReload = false;
+				}
+			},
 		});
 
 	}
@@ -117,15 +127,24 @@ export class SecuritySettings {
 	}
 
 	static isDelayedReload = false;
+	static blockReload = false;
 
 	static delayedReload() {
+		const dReload = () => {
+			if (this.blockReload) {
+				setTimeout(dReload, 2000);
+				return
+			}
+			window.location.reload();
+		};
 		if (!this.isDelayedReload) {
 			const msg = "Reload Required";
 			if (ui.notifications)
 				ui.notifications.notify(msg);
-			setTimeout(() =>  window.location.reload(), 2000);
+			setTimeout(() => dReload() , 2000);
 		}
 		this.isDelayedReload= true;
 	}
+
 
 }
