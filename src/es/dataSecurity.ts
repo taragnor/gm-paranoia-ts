@@ -75,8 +75,9 @@ export class DataSecurity {
 	static #applyMainItem(baseClass: AnyItem, fields: string[]) {
 		const oldUpdate  = baseClass.prototype.update;
 		baseClass.prototype.update =
-			async function (data: any, context: {}) {
+			async function (data: any, context?: {ignoreEncrypt?: boolean}) {
 				for (const field of fields) {
+					if (context?.ignoreEncrypt) continue;
 					if (data[field]) {
 						const content = data[field];
 						if (!DataSecurity.isEncrypted(content)) {
@@ -275,7 +276,12 @@ export class DataSecurity {
 		) as string;
 	}
 
-	static async getAllEncryptedValues() : Promise<(readonly [DecryptTargetObjects[], string[] ]) []> {
+	/** returns a tuple of
+	[encryptableObjects[],
+	encryptoablefields[] ]
+	Does not test each object for any ownership concerns
+	 */
+	static async getAllEncryptablesTuple() : Promise<(readonly [DecryptTargetObjects[], string[] ]) []> {
 		const game = getGame();
 		const x = this.encryptables
 		.entries();
@@ -296,7 +302,6 @@ export class DataSecurity {
 					const items=  x.items.map(x=>x);
 					return items;
 				}).flat(1);
-				const item = items[0];
 				const combined =  x.concat(items);
 				const ret :readonly [DecryptTargetObjects[], string[]] = [combined, fields] as const;
 				return ret;
@@ -318,12 +323,26 @@ export class DataSecurity {
 		return data;
 	}
 
+	static async getAllEncryptables() : Promise <[DecryptTargetObjects, string] []> {
+		const initial  = await DataSecurity.getAllEncryptablesTuple();
+		return initial.map( ([objArr, fieldsArr]) => {
+			const ret : [DecryptTargetObjects, string][] =  objArr
+				.map( (obj) => {
+					const r = fieldsArr.map(
+						(field) : [DecryptTargetObjects, string] => [obj, field] );
+					return r;
+				})
+				.flat(1);
+			return ret;
+		})
+		.flat(1);
+	}
+
+
 	static async validateKey(potentialKey: string) : Promise<boolean> {
 		const encryptor = new Encryptor(potentialKey);
-		const encryptables = await this.getAllEncryptedValues();
-		return encryptables.every( ([dataObj, fields]) => {
-			return dataObj.every( (obj) => {
-				return fields.every( field => {
+		const encryptables = await this.getAllEncryptables();
+		return encryptables.every( ([obj , field]) => {
 					const data =  DataSecurity.getFieldValue(obj, field);
 					if (!data || !DataSecurity.isEncrypted(data))
 						return true;
@@ -333,8 +352,6 @@ export class DataSecurity {
 						return false;
 					}
 					return true;
-				});
-			});
 		});
 	}
 
@@ -384,11 +401,41 @@ export class DataSecurity {
 		return true;
 	}
 
-	encryptAll() {
+	async encryptAll() {
+		const encryptables = await DataSecurity.getAllEncryptables();
+		await Promise.all(
+			encryptables.map( async ([obj, field]) => {
+				const data = DataSecurity.getFieldValue(obj, field);
+				if (obj.id && data) {
+					const eData = await this.encrypt(obj.id, field, data);
+					const updateObj : {[k: string] : string} ={};
+					updateObj[field] = eData;
+					await obj.update(updateObj, {ignoreEncrypt:true});
+				}
+			})
+		);
+		let x : DocumentModificationContext;
+
 
 	}
 
-	decryptAll() {
+	async decryptAll() {
+		const encryptables = await DataSecurity.getAllEncryptables();
+		await Promise.all(
+			encryptables.map( async ([obj, field]) => {
+				const data = DataSecurity.getFieldValue(obj, field);
+				if (obj.id && data) {
+					const dData = await this.decrypt(obj.id, field);
+					const updateObj : {[k: string] : string} ={};
+					updateObj[field] = dData;
+					const name = ("name" in obj)? obj.name : obj.id;
+					console.log(`SEtting ${name} data to ${dData}`);
+					console.log(updateObj);
+
+					await obj.update(updateObj, {ignoreEncrypt:true});
+				}
+			})
+		);
 
 	}
 }
@@ -455,7 +502,7 @@ class Encryptor {
 			ret += String.fromCharCode(data.charCodeAt(i) - keyCode);
 		}
 		if (ret.startsWith("1") && ret.endsWith("Z"))
-			return ret.substring(1, ret.length-2);
+			return ret.substring(1, ret.length-1);
 		else throw new Error(`Decryption failed: ${data}`);
 	}
 

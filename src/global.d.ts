@@ -100,6 +100,7 @@ declare class JournalEntryPage {
 	update( data: {}, context: {}) : void;
 	prepareDerivedData() : void;
 	get parent() : JournalEntry;
+	get id(): string;
 }
 
 interface Actor {
@@ -109,6 +110,9 @@ interface Item {
 	collectionName: string;
 }
 
+interface DocumentModificationContext {
+	ignoreEncrypt?: boolean;
+}
 
 declare global {
 	interface Window {
