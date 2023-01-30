@@ -2,6 +2,7 @@ import { getGame, Sockets, localize} from "./foundry-tools.js";
 import {Debug} from "./debug.js";
 import {JournalFixUps} from "./JournalFixups.js";
 import {KeyManager} from "./keymanager.js";
+import {SecuritySettings} from "./security-settings.js";
 
 const ENCRYPTSTARTER = "<p>__#ENCRYPTED#__::[v1]</p>";
 
@@ -38,7 +39,6 @@ export class DataSecurity {
 	static _instance: DataSecurity;
 	static encryptables: Map<ConstructorOf<DecryptTargetObjects>, string[]>;
 
-
 	static get instance() {
 		return this._instance;
 
@@ -65,7 +65,7 @@ export class DataSecurity {
 	}
 
 	/** instructs DatjaSecurity to encrypt the data field on the given data item class and any relevant sheets that use it
-	*/
+	 */
 	static setEncryptable( baseClass: AnyItem, sheets: SheetType[], fields: string[])  {
 		this.encryptables.set(baseClass, fields);
 		this.#applyMainItem(baseClass, fields);
@@ -79,7 +79,7 @@ export class DataSecurity {
 				for (const field of fields) {
 					if (data[field]) {
 						const content = data[field];
-						if (!DataSecurity.isEncrypted(content)){
+						if (!DataSecurity.isEncrypted(content)) {
 							try {
 								const encrypted = await DataSecurity.instance.encrypt(this.id, field, content);
 								data[field] = encrypted;
@@ -166,9 +166,10 @@ export class DataSecurity {
 		}
 		const [obj, _data] = await DataSecurity.findData(objectId, field);
 		//@ts-ignore
-		const tester = obj instanceof JournalEntryPage ? obj.parent : obj;
-		if (!tester.testUserPermission(user, "OBSERVER"))
+		const tester : Actor | Item | JournalEntry = obj instanceof JournalEntryPage ? obj.parent : obj;
+		if (!tester.testUserPermission(user, "OBSERVER" ,{exact: false})) {
 			return false;
+		}
 		return true;
 	}
 
@@ -210,9 +211,21 @@ export class DataSecurity {
 		return ret;
 	}
 
-	async encrypt (targetObjId: string, targetObjField: string, data: string) : Promise<string> {
+	isEncryptableObject(obj : DecryptTargetObjects) : boolean {
+		if (!SecuritySettings.useEncryption()) return false;
+		const game = getGame();
+		if (!SecuritySettings.encryptAll()) { //check for player ownership here
+			const players = game.users!.filter (x=> !x.isGM);
+			const tester : Actor | Item | JournalEntry = obj instanceof JournalEntryPage ? obj.parent : obj;
+			if (players.some( plyr => tester.testUserPermission(plyr, "OBSERVER", {exact:false})))
+				return false; //don't encrypt if players can see it
+		}
+		return true;
+	}
 
+	async encrypt (targetObjId: string, targetObjField: string, data: string) : Promise<string> {
 		const [obj, _oldData] = await DataSecurity.findData(targetObjId, targetObjField);
+		if (!this.isEncryptableObject(obj)) return data;
 		if (DataSecurity.isEncrypted(data)) return data;
 		return await this.#getEncryptedString(data, targetObjId, targetObjField);
 	}
@@ -370,6 +383,14 @@ export class DataSecurity {
 		x[f] = newVal;
 		return true;
 	}
+
+	encryptAll() {
+
+	}
+
+	decryptAll() {
+
+	}
 }
 
 class Encryptor {
@@ -440,5 +461,6 @@ class Encryptor {
 
 }
 
+//Left to allow systems to implement encryption
 //@ts-ignore
 window.DataSecurity = DataSecurity;

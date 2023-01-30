@@ -98,6 +98,8 @@ declare class JournalTextTinyMCESheet {
 
 declare class JournalEntryPage {
 	update( data: {}, context: {}) : void;
+	prepareDerivedData() : void;
+	get parent() : JournalEntry;
 }
 
 interface Actor {

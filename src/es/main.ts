@@ -19,9 +19,7 @@ Hooks.on("ready",  () => {
 		DiceSecurity.SecurityInit();
 	if (SecuritySettings.monitorChanges())
 		ChangeLogger.init();
-	if (SecuritySettings.useEncryption()) {
-		DataSecurity.init();
-	}
+	DataSecurity.init();
 });
 
 

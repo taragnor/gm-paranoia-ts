@@ -16,11 +16,11 @@ export class JournalFixUps {
 		//@ts-ignore
 		const sheet = CONFIG.Actor.sheetClasses.character['dnd5e.ActorSheet5eCharacter'].cls;
 		DataSecurity.setEncryptable(mainActor , [sheet], ["system.details.biography.value", "system.details.biography.public"])
-
 	}
 
-
-
 }
+
+
+
 
 

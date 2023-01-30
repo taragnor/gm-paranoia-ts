@@ -6,6 +6,9 @@
 "TaragnorSecurity.settings.monitorRolls.hint" : "Monitor and Verify Dice Rolls",
 "TaragnorSecurity.settings.encryptData.name" : "Use Data Encryption",
 "TaragnorSecurity.settings.encryptData.hint" : "Encrypts Journal Entries and possible more (assuming system supports it)",
+"TaragnorSecurity.settings.encryptData.0" : "No Encryption",
+"TaragnorSecurity.settings.encryptData.1" : "Encrypt private data (unviewable by players)",
+"TaragnorSecurity.settings.encryptData.2" : "Encrypt Everything",
 
 "TaragnorSecurity.diceProtection.report.verified0" : "Roll Verified",
 "TaragnorSecurity.diceProtection.report.verified1" : "No Cheating",
@@ -25,4 +28,5 @@
 
 "TaragnorSecurity.encryption.error.wrongKey" : "Key does not work on existing encrypted data! Must enter same key used to encrypt or data will be lost!",
 "TaragnorSecurity.encryption.error.noKeyProvided" : "You must select a key to use encryption feature"
+
 }
