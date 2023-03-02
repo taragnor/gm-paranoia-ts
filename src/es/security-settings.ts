@@ -66,7 +66,9 @@ export class SecuritySettings {
 					this.blockReload = true;
 					const msg = localize ("TaragnorSecurity.settings.encryptInProgress");
 					ui.notifications!.notify(msg);
-					await DataSecurity.instance.refreshEncryption();
+					if (game.user!.isGM) {
+						await DataSecurity.instance.refreshEncryption();
+					}
 					const msg2 = localize ("TaragnorSecurity.settings.encryptDone");
 					ui.notifications!.notify(msg2);
 					this.blockReload = false;

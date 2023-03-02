@@ -5,6 +5,8 @@ import {KeyManager} from "./keymanager.js";
 import {SecuritySettings} from "./security-settings.js";
 
 const ENCRYPTSTARTER = "<p>__#ENCRYPTED#__::[v1]</p>";
+const PRE_HOOK_NAME= "encryptionPreEnable";
+const POST_HOOK_NAME = "encryptionEnable";
 
 
 enum SocketCommand{
@@ -29,7 +31,6 @@ type DecryptTargetObjects = Actor | Item | JournalEntryPage;
 type AnyItem = ConstructorOf<Item | Actor | JournalEntryPage>;
 type SheetType = ConstructorOf<DocumentSheet>
 
-	const HOOK_NAME= "encryptionPreEnable";
 
 export class DataSecurity {
 
@@ -46,11 +47,11 @@ export class DataSecurity {
 	static async init() {
 		const game = getGame();
 		this.encryptables = new Map();
-		Hooks.on(HOOK_NAME, (dataSecurity: typeof DataSecurity) => {
+		Hooks.on(PRE_HOOK_NAME, (dataSecurity: typeof DataSecurity) => {
 			JournalFixUps.apply(dataSecurity);
 		});
 		try {
-			await Hooks.callAll(HOOK_NAME, this);
+			await Hooks.callAll(PRE_HOOK_NAME, this);
 		}
 		catch (e) {
 			ui.notifications!.error("Error running hooks on encryptionPreEnable");
@@ -61,6 +62,7 @@ export class DataSecurity {
 			this._instance = new DataSecurity(key);
 		}
 		console.log("Data Security initialized");
+		await Hooks.callAll(POST_HOOK_NAME, this);
 	}
 
 	/** instructs DatjaSecurity to encrypt the data field on the given data item class and any relevant sheets that use it
@@ -84,7 +86,7 @@ export class DataSecurity {
 						const content = data[field];
 						if (!DataSecurity.isEncrypted(content)) {
 							try {
-								const encrypted = await DataSecurity.instance.encrypt(this.id, field, content);
+								const encrypted = await DataSecurity.encrypt(this.id, field, content);
 								data[field] = encrypted;
 							} catch (e) {
 								ui.notifications!.error(`Encryption Error on ${field}`);
@@ -94,6 +96,19 @@ export class DataSecurity {
 				}
 				return oldUpdate.apply(this, arguments);
 			}
+		baseClass.prototype.decryptData = async function () {
+			// console.log(`Decyrpting Data on ${this.name}`);
+			for (const field of fields) {
+				try {
+					console.log(`Decrypting Data for ${this.name}`);
+					const decryptedContent = await DataSecurity.decrypt(this.id, field);
+					DataSecurity.setFieldValue(this, field, decryptedContent);
+				} catch (e) {
+					console.log(`Error on ${this.name}`);
+					console.log(e);
+				}
+			}
+		}
 	}
 
 	static #applySheets(sheets: SheetType[], fields:string[]) {
@@ -101,6 +116,8 @@ export class DataSecurity {
 			const oldgetData = sheet.prototype.getData;
 			sheet.prototype.getData =
 				async function (this: InstanceType<typeof sheet>, options= {}) {
+					if ("decryptData" in (this.object as object))
+						await (this.object as any).decryptData();
 					const data = await oldgetData.call(this, options);
 					for (const field of fields) {
 						const item = this.document;
@@ -109,7 +126,7 @@ export class DataSecurity {
 						const itemId = item.id;
 						if (!itemId)
 							throw new Error(`Can't get item Id for ${item.name}`);
-						const decryptedContent = await DataSecurity.instance.decrypt(itemId, field)
+						const decryptedContent = await DataSecurity.decrypt(itemId, field);
 						const fieldSplit = field.split(".").reverse();
 						let x : any = item;
 						let y : any = data?.actor ?? data?.item;
@@ -126,6 +143,7 @@ export class DataSecurity {
 								async: true
 							});
 						}
+						Debug(data);
 						return data;
 					}
 				}
@@ -142,7 +160,7 @@ export class DataSecurity {
 	}
 
 	async onEncryptRequest({id,field, dataString}: EncryptRequestObj, {sender}: SocketPayload  ): Promise<string> {
-		return this.encrypt(id, field, dataString);
+		return DataSecurity.encrypt(id, field, dataString);
 	}
 
 	async onDecryptRequest({id,field}: DecryptRequestObj, {sender}:SocketPayload): Promise<string> {
@@ -151,7 +169,7 @@ export class DataSecurity {
 		if (!hasPermission) {
 			return "ACCESS DENIED";
 		}
-		return this.decrypt(id, field);
+		return DataSecurity.decrypt(id, field);
 	}
 
 	async checkPermissions(userId: string, objectId: string, field:string) : Promise<boolean> {
@@ -180,26 +198,30 @@ export class DataSecurity {
 		return Encryptor.isEncrypted(data);
 	}
 
-	async decrypt(targetObjId: string, targetObjField: string, force = false) : Promise<string> {
+	static async decrypt(targetObjId: string, targetObjField: string, force = false) : Promise<string> {
 		try {
 			const [obj, data] = await DataSecurity.findData(targetObjId, targetObjField);
 			if (!data) return "";
 			if ( !DataSecurity.isEncrypted(data) && !force ) return data;
 			return await this.#getDecryptedString( data, targetObjId, targetObjField);
 		} catch (e) {
-			ui.notifications!.error("Error on Decryption");
+			try {
+				ui.notifications!.error("Error on Decryption");
+			} catch (e2) {
+				console.error("Error on Decryption (couldn't use ui");
+			}
 			throw e;
 		}
 	}
 
-	async #getDecryptedString(data: string, objId : string, field: string) : Promise<string> {
+	static async #getDecryptedString(data: string, objId : string, field: string) : Promise<string> {
 		if (!getGame().user!.isGM)
 		return await this.sendDecryptRequest(objId, field);
 		else
-		return this.encryptor.decrypt(data);
+		return this.instance.encryptor.decrypt(data);
 	}
 
-	async sendDecryptRequest (objId: string, field: string) : Promise<string> {
+	static async sendDecryptRequest (objId: string, field: string) : Promise<string> {
 		//send to GM
 		const ret = await Sockets.simpleTransaction(
 			SocketCommand.DECRYPT_REQUEST,
@@ -214,7 +236,7 @@ export class DataSecurity {
 		return ret;
 	}
 
-	isEncryptableObject(obj : DecryptTargetObjects) : boolean {
+	static isEncryptableObject(obj : DecryptTargetObjects) : boolean {
 		if (!SecuritySettings.useEncryption()) return false;
 		const game = getGame();
 		if (!SecuritySettings.encryptAll()) { //check for player ownership here
@@ -226,14 +248,15 @@ export class DataSecurity {
 		return true;
 	}
 
-	async encrypt (targetObjId: string, targetObjField: string, data: string) : Promise<string> {
+	static async encrypt (targetObjId: string, targetObjField: string, data: string | undefined | null) : Promise<string> {
+		if (data == null) return "";
 		const [obj, _oldData] = await DataSecurity.findData(targetObjId, targetObjField);
 		if (!this.isEncryptableObject(obj)) return data;
 		if (DataSecurity.isEncrypted(data)) return data;
 		return await this.#getEncryptedString(data, targetObjId, targetObjField);
 	}
 
-	static async findData(targetObjId: string, targetObjField: string): Promise<[DecryptTargetObjects, string | undefined]> {
+	static async findData(targetObjId: string, targetObjField: string): Promise<[DecryptTargetObjects, string | undefined | null]> {
 		const game = getGame();
 		const obj = game.journal!
 		.map( //@ts-ignore
@@ -252,15 +275,15 @@ export class DataSecurity {
 		return [obj, fieldValue];
 	}
 
-	async #getEncryptedString(data: string, objId: string, field:string) : Promise<string> {
+	static async #getEncryptedString(data: string, objId: string, field:string) : Promise<string> {
 		const game = getGame();
 		if (!game.user!.isGM)
 		return await this.sendEncryptRequest(data, objId, field);
 		else
-		return this.encryptor.encrypt(data);
+		return this.instance.encryptor.encrypt(data);
 	}
 
-	async sendEncryptRequest (stringToEncrypt: string,objId: string, field:string) : Promise<string> {
+	static async sendEncryptRequest (stringToEncrypt: string,objId: string, field:string) : Promise<string> {
 		//send to GM
 		const GMs =	getGame().users!
 		.filter(x=>x.isGM && x.active)
@@ -361,7 +384,7 @@ export class DataSecurity {
 		await KeyManager.clearKey();
 	}
 
-	static getFieldValue(item: {[key:string]:any}, field:string) : string | undefined {
+	static getFieldValue(item: {[key:string]:any}, field:string) : string | undefined | null {
 		let x : unknown  = item;
 		const peices = field
 			.split(".")
@@ -376,7 +399,9 @@ export class DataSecurity {
 			if (typeof x == "undefined")
 				return undefined ;
 			if (typeof x == "number")
-				throw new Error(`Field ${field} is a number, numeric encyrption not yet allowed`);
+				throw new Error(`Field ${field} is a number, numeric encryption not yet allowed`);
+			if ( x === null)
+				return null;
 		}
 		return x;
 	}
@@ -403,13 +428,13 @@ export class DataSecurity {
 		return true;
 	}
 
-	async encryptAll() {
+	 async encryptAll() {
 		const encryptables = await DataSecurity.getAllEncryptables();
 		await Promise.all(
 			encryptables.map( async ([obj, field]) => {
 				const data = DataSecurity.getFieldValue(obj, field);
 				if (obj.id && data) {
-					const eData = await this.encrypt(obj.id, field, data);
+					const eData = await DataSecurity.encrypt(obj.id, field, data);
 					const updateObj : {[k: string] : string} ={};
 					updateObj[field] = eData;
 					await obj.update(updateObj, {ignoreEncrypt:true});
@@ -425,15 +450,15 @@ export class DataSecurity {
 			encryptables.map( async ([obj, field]) => {
 				const data = DataSecurity.getFieldValue(obj, field);
 				if (!obj.id || !data) return;
-				const shouldBeEncyrpted = this.isEncryptableObject(obj);
+				const shouldBeEncyrpted = DataSecurity.isEncryptableObject(obj);
 				const isEncrypted = DataSecurity.isEncrypted(data);
 				if (shouldBeEncyrpted && !isEncrypted) {
-					const eData = await this.encrypt(obj.id, field, data);
+					const eData = await DataSecurity.encrypt(obj.id, field, data);
 					const updateObj : {[k: string] : string} ={};
 					updateObj[field] = eData;
 					await obj.update(updateObj, {ignoreEncrypt:true});
 				}  else if (!shouldBeEncyrpted && isEncrypted) {
-					const eData = await this.decrypt(obj.id, field);
+					const eData = await DataSecurity.decrypt(obj.id, field);
 					const updateObj : {[k: string] : string} ={};
 					updateObj[field] = eData;
 					await obj.update(updateObj, {ignoreEncrypt:true});
@@ -447,11 +472,11 @@ export class DataSecurity {
 			encryptables.map( async ([obj, field]) => {
 				const data = DataSecurity.getFieldValue(obj, field);
 				if (obj.id && data) {
-					const dData = await this.decrypt(obj.id, field);
+					const dData = await DataSecurity.decrypt(obj.id, field);
 					const updateObj : {[k: string] : string} ={};
 					updateObj[field] = dData;
 					const name = ("name" in obj)? obj.name : obj.id;
-					console.log(`SEtting ${name} data to ${dData}`);
+					console.log(`Setting ${name} data to ${dData}`);
 					console.log(updateObj);
 
 					await obj.update(updateObj, {ignoreEncrypt:true});
@@ -476,12 +501,12 @@ class Encryptor {
 
 	private _encrypt(data : string) : string {
 		// console.log("Encryptor called");
-		if (this.#key.length == 0){
+		if (this.#key.length == 0) {
 			const msg = localize("TaragnorSecurity.encryption.error.missingKey");
 			ui.notifications!.error(msg)
 			throw new Error(msg);
 		}
-		const target = "1" + data +"Z"; //add padding for verification
+		const target = "1" + data + "Z"; //add padding for verification
 		let ret = "";
 		for (let i = 0 ; i < target.length; i++) {
 			const keyCode  = this.#key.charCodeAt(i % this.#key.length)!;
@@ -496,12 +521,13 @@ class Encryptor {
 		return 1;
 	}
 
-	static isEncrypted (data:string | undefined) : boolean {
+	static isEncrypted (data:string | undefined | null) : boolean {
 		if (!data) return false;
 		return (data.startsWith(ENCRYPTSTARTER));
 	}
 
-	decrypt (data:string) : string {
+	decrypt (data:string | null | undefined) : string {
+		if (data == null) return "";
 		const version = this.getEncryptionVersion(data);
 		switch (version) {
 			case 1:
