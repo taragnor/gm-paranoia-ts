@@ -41,7 +41,6 @@ export class DataSecurity {
 
 	static get instance() {
 		return this._instance;
-
 	}
 
 	static async init() {
@@ -65,6 +64,9 @@ export class DataSecurity {
 	}
 
 	/** instructs DatjaSecurity to encrypt the data field on the given data item class and any relevant sheets that use it
+	 @param baseClass The document type (Actor, Journal, etc) that contains the object
+	 @param sheets an array of sheets that you want to be affected
+	 @param fields an array of fields you want encrypted in format "system.details.biography"
 	 */
 	static setEncryptable( baseClass: AnyItem, sheets: SheetType[], fields: string[])  {
 		this.encryptables.set(baseClass, fields);
