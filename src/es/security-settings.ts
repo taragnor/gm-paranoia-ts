@@ -1,5 +1,6 @@
 import {getGame, localize} from './foundry-tools.js';
 import {DataSecurity} from './dataSecurity.js';
+import {ChangeLogger} from './changeLogger.js';
 
 type EncryptionType = keyof typeof SecuritySettings.ENCRYPTIONTYPES;
 
@@ -67,7 +68,9 @@ export class SecuritySettings {
 					const msg = localize ("TaragnorSecurity.settings.encryptInProgress");
 					ui.notifications!.notify(msg);
 					if (game.user!.isGM) {
+						ChangeLogger.suspendLogging();
 						await DataSecurity.instance.refreshEncryption();
+						ChangeLogger.resumeLogging();
 					}
 					const msg2 = localize ("TaragnorSecurity.settings.encryptDone");
 					ui.notifications!.notify(msg2);

@@ -32,6 +32,7 @@ export class ChangeLogger {
 	static logFilePath : string = "";
 	static folder : string;
 	static log: ChangeGroup[];
+	static suspended: boolean = false;
 
 	static async init() {
 		const game = getGame();
@@ -48,6 +49,16 @@ export class ChangeLogger {
 			console.error(e);
 		}
 		Sockets.addHandler(SocketCommand.NOTIFY_GM, this.onGMNotify.bind(this));
+	}
+
+	static suspendLogging() {
+		console.log("Logging has been suspended");
+		this.suspended= true;
+	}
+
+	static resumeLogging() {
+		console.log("Logging has been resumed");
+		this.suspended= false;
 	}
 
 	static async notifyGM (thing: Item | Actor, changes: FoundryChangeLog, options: {}, userId: string) {
@@ -84,6 +95,7 @@ export class ChangeLogger {
 
 	static async onAnyPreUpdate(thing: Item | Actor, changes: FoundryChangeLog, options: {}, userId: string) {
 		const game = getGame();
+		if (this.suspended) return;
 		if (!game.user!.isGM) {
 			await this.notifyGM(thing, changes, options, userId);
 			return;}
