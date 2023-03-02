@@ -89,7 +89,9 @@ export class DataSecurity {
 								const encrypted = await DataSecurity.encrypt(this.id, field, content);
 								data[field] = encrypted;
 							} catch (e) {
-								ui.notifications!.error(`Encryption Error on ${field}`);
+								ui.notifications!.error(`Encryption Error on ${field}, on ${this.name}`);
+								Debug(this);
+								console.log(e);
 							}
 						}
 					}
@@ -97,10 +99,9 @@ export class DataSecurity {
 				return oldUpdate.apply(this, arguments);
 			}
 		baseClass.prototype.decryptData = async function () {
-			// console.log(`Decyrpting Data on ${this.name}`);
 			for (const field of fields) {
 				try {
-					console.log(`Decrypting Data for ${this.name}`);
+					// console.log(`Decrypting Data for ${this.name}`);
 					const decryptedContent = await DataSecurity.decrypt(this.id, field);
 					DataSecurity.setFieldValue(this, field, decryptedContent);
 				} catch (e) {
@@ -268,7 +269,18 @@ export class DataSecurity {
 		.find(x=> x.id == targetObjId)
 		??
 		game.items!
-		.find(x=> x.id == targetObjId);
+		.find(x=> x.id == targetObjId)
+		??
+		game.actors!
+		.find (
+			actor => {
+				const items = actor.items;
+				return items
+			.some( i => i.id == targetObjId);
+			})
+		?.items.find( i => i.id ==targetObjId)
+		??
+		null; //TODO: search for token object
 		if (!obj)
 		throw new Error(`Couldn't find ID: ${targetObjId}`);
 		const fieldValue = this.getFieldValue(obj, targetObjField);
@@ -428,26 +440,28 @@ export class DataSecurity {
 		return true;
 	}
 
-	 async encryptAll() {
-		const encryptables = await DataSecurity.getAllEncryptables();
-		await Promise.all(
-			encryptables.map( async ([obj, field]) => {
-				const data = DataSecurity.getFieldValue(obj, field);
-				if (obj.id && data) {
-					const eData = await DataSecurity.encrypt(obj.id, field, data);
-					const updateObj : {[k: string] : string} ={};
-					updateObj[field] = eData;
-					await obj.update(updateObj, {ignoreEncrypt:true});
-				}
-			})
-		);
-	}
+	 // async encryptAll() {
+		// const encryptables = await DataSecurity.getAllEncryptables();
+		// await Promise.all(
+			// encryptables.map( async ([obj, field]) => {
+				// const data = DataSecurity.getFieldValue(obj, field);
+				// if (obj.id && data) {
+					// const eData = await DataSecurity.encrypt(obj.id, field, data);
+					// const updateObj : {[k: string] : string} ={};
+					// updateObj[field] = eData;
+					// await obj.update(updateObj, {ignoreEncrypt:true});
+				// }
+			// })
+		// );
+	// }
 
 	//* update encyrption style to newest settings
 	async refreshEncryption () {
 		const encryptables = await DataSecurity.getAllEncryptables();
 		await Promise.all(
 			encryptables.map( async ([obj, field]) => {
+				//@ts-ignore
+				obj.reset();
 				const data = DataSecurity.getFieldValue(obj, field);
 				if (!obj.id || !data) return;
 				const shouldBeEncyrpted = DataSecurity.isEncryptableObject(obj);

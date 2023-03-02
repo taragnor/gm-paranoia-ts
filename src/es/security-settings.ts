@@ -125,7 +125,6 @@ export class SecuritySettings {
 
 	static encryptAll() : boolean {
 		return this.getEncryptionType() == "full";
-
 	}
 
 	static isDelayedReload = false;
