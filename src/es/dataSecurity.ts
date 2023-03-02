@@ -276,15 +276,27 @@ export class DataSecurity {
 			actor => {
 				const items = actor.items;
 				return items
-			.some( i => i.id == targetObjId);
+					.some( i => i.id == targetObjId);
 			})
 		?.items.find( i => i.id ==targetObjId)
 		??
-		null; //TODO: search for token object
+		DataSecurity._findData_tokenScan(targetObjId)
 		if (!obj)
 		throw new Error(`Couldn't find ID: ${targetObjId}`);
 		const fieldValue = this.getFieldValue(obj, targetObjField);
 		return [obj, fieldValue];
+	}
+
+	static _findData_tokenScan ( targetObjId: string) {
+		const game = getGame();
+		const tokenActors = game.scenes!.contents
+		.flatMap(
+			scene=> scene.tokens.contents.map( tok => tok.actor)
+		).filter( x=> x != null);
+		return tokenActors.find( actor => actor?.id == targetObjId)
+		??
+			tokenActors.flatMap(x=> x?.items.contents)
+		.find (item => item?.id == targetObjId);
 	}
 
 	static async #getEncryptedString(data: string, objId: string, field:string) : Promise<string> {
