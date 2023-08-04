@@ -264,14 +264,11 @@ export class DataSecurity {
 			x=> x.pages.contents)
 		.flat(1)
 		.find(x=> x.id == targetObjId)
-		??
-		game.actors!
+		?? game.actors!
 		.find(x=> x.id == targetObjId)
-		??
-		game.items!
+		?? game.items!
 		.find(x=> x.id == targetObjId)
-		??
-		game.actors!
+		?? game.actors!
 		.find (
 			actor => {
 				const items = actor.items;
@@ -279,15 +276,16 @@ export class DataSecurity {
 					.some( i => i.id == targetObjId);
 			})
 		?.items.find( i => i.id ==targetObjId)
-		??
-		DataSecurity._findData_tokenScan(targetObjId)
-		if (!obj)
-		throw new Error(`Couldn't find ID: ${targetObjId}`);
+		?? DataSecurity._findData_tokenScan(targetObjId)
+		?? await DataSecurity._findData_compendiumScan(targetObjId);
+		if (!obj) {
+			throw new Error(`Couldn't find ID: ${targetObjId}`);
+		}
 		const fieldValue = this.getFieldValue(obj, targetObjField);
 		return [obj, fieldValue];
 	}
 
-	static _findData_tokenScan ( targetObjId: string) {
+	static _findData_tokenScan ( targetObjId: string) : Actor | Item | undefined {
 		const game = getGame();
 		const tokenActors = game.scenes!.contents
 		.flatMap(
@@ -297,6 +295,35 @@ export class DataSecurity {
 		??
 			tokenActors.flatMap(x=> x?.items.contents)
 		.find (item => item?.id == targetObjId);
+	}
+
+
+	static async _findData_compendiumScan (targetObjId: string) : Promise< Actor | Item | undefined> {
+		const game = getGame();
+		for (const pack of game.packs) {
+			switch ( pack.documentName ) {
+				case "Actor": {
+					const query = {};
+					const packActors : Actor[] = await pack.getDocuments(query);
+					const retobj : Actor | Item | undefined = packActors
+						.find( (x: Actor)=> x.id == targetObjId)
+						?? pack.
+						find( (x: Actor)=> x.items
+							.some(i=> i.id == targetObjId)
+						)?.items.find((i: Item) => i.id == targetObjId);
+					if (retobj) return retobj;
+					continue;
+				}
+				case "Item": {
+					const packItem : Item = await pack.getDocument(targetObjId);
+					if (packItem) return packItem;
+					continue;
+				}
+				default:
+					continue;
+			}
+		}
+		return undefined;
 	}
 
 	static async #getEncryptedString(data: string, objId: string, field:string) : Promise<string> {
