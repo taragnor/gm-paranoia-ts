@@ -2,7 +2,8 @@ import { getGame, Sockets, localize} from "./foundry-tools.js";
 import {Debug} from "./debug.js";
 import {JournalFixUps} from "./JournalFixups.js";
 import {KeyManager} from "./keymanager.js";
-import {SecuritySettings} from "./security-settings.js";
+import {SecuritySettings, EncryptionSettings} from "./security-settings.js";
+import {ChangeLogger} from './changeLogger.js';
 
 const ENCRYPTSTARTER = "<p>__#ENCRYPTED#__::[v1]</p>";
 const PRE_HOOK_NAME= "encryptionPreEnable";
@@ -42,6 +43,25 @@ export class DataSecurity {
 
 	static get instance() {
 		return this._instance;
+	}
+
+	static async changeEncryptionLevel(newSettings:EncryptionSettings ) {
+				if (DataSecurity.instance) {
+					const game = getGame();
+					SecuritySettings.blockReload = true;
+					const msg = localize ("TaragnorSecurity.settings.encryptInProgress");
+					ui.notifications!.notify(msg);
+					if (game.user!.isGM) {
+						ChangeLogger.suspendLogging();
+						await DataSecurity.instance.refreshEncryption();
+						ChangeLogger.resumeLogging();
+					}
+					const msg2 = localize ("TaragnorSecurity.settings.encryptDone");
+					ui.notifications!.notify(msg2);
+					SecuritySettings.blockReload = false;
+				}
+
+
 	}
 
 	static async init() {
@@ -105,7 +125,7 @@ export class DataSecurity {
 					const decryptedContent = await DataSecurity.decrypt(this.id, field);
 					DataSecurity.setFieldValue(this, field, decryptedContent);
 				} catch (e) {
-					console.log(`Error on ${this.name}`);
+					console.log(`Error on ${this.id}: ${this.name}, ${field} `);
 					console.log(e);
 				}
 			}
@@ -422,15 +442,19 @@ export class DataSecurity {
 		const encryptor = new Encryptor(potentialKey);
 		const encryptables = await this.getAllEncryptables();
 		return encryptables.every( ([obj , field]) => {
-					const data =  DataSecurity.getFieldValue(obj, field);
-					if (!data || !DataSecurity.isEncrypted(data))
-						return true;
-					try { encryptor.decrypt(data);}
-					catch (e) {
-						console.log(e);
-						return false;
-					}
-					return true;
+			const data =  DataSecurity.getFieldValue(obj, field);
+			if (!data || !DataSecurity.isEncrypted(data))
+				return true;
+			try {
+				encryptor.decrypt(data);
+				return true;
+			}
+			catch (e) {
+				//@ts-ignore
+				console.log(`Object Id: ${obj.id}, Object: ${obj?.name},${field}`);
+				console.log(e);
+				return false;
+			}
 		});
 	}
 
@@ -525,6 +549,10 @@ class Encryptor {
 		return ENCRYPTSTARTER + this._encrypt(data);
 	}
 
+	updateKey(key: string) {
+		this.#key = key;
+	}
+
 	private _encrypt(data : string) : string {
 		// console.log("Encryptor called");
 		if (this.#key.length == 0) {
@@ -559,7 +587,7 @@ class Encryptor {
 			case 1:
 				return this._decrypt1(data.substring(ENCRYPTSTARTER.length));
 			default:
-				throw new Error("Unrecognized Version number: ${version}");
+				throw new Error(`Unrecognized Version number: ${version}`);
 		}
 	}
 

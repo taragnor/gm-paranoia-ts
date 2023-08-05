@@ -44,9 +44,10 @@ export class ChangeLogger {
 		try {
 			this.log = await StorageManager.readChanges();
 			console.log("Log Loaded Successfully");
-		} catch (e) {
+		} catch (e ) {
 			this.log = [];
-			console.error(e);
+			console.log(e.message);
+			console.log(e.stack);
 		}
 		Sockets.addHandler(SocketCommand.NOTIFY_GM, this.onGMNotify.bind(this));
 	}

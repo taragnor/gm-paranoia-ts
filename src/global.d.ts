@@ -1,3 +1,4 @@
+
 interface ChatMessage {
 	timestamp: number;
 	rolls: RollType[];

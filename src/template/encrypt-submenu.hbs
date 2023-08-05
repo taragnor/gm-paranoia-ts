@@ -1,0 +1,28 @@
+<form>
+	<h1>
+	WARNING ENCYRPION IS CURRENTLY EXPERIMENTAL! BACK UP YOUR DATA BEFORE ACTIVATING!
+	</h1>
+	<label> Encryption Key </label>
+	<input type="text" name="key" value="{{key}}">
+	<select name="useEncryption">
+		{{#select object.useEncryption}}
+		<option value="none">
+		{{localize "TaragnorSecurity.settings.encryptData.0" }}
+		</option>
+		<option value="gmonly">
+		{{localize "TaragnorSecurity.settings.encryptData.1" }}
+		</option>
+		<option value="full">
+		{{localize "TaragnorSecurity.settings.encryptData.2" }}
+		</option>
+		{{/select}}
+	</select>
+
+
+	<footer>
+		<button type="submit">
+			<i class="far fa-save"></i>
+		</button>
+	</footer>
+</form>
+

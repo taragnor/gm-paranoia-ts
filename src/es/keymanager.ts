@@ -49,6 +49,8 @@ export class KeyManager {
 	}
 
 	static async storeKey(key: string): Promise<void> {
+		const oldKey = await this.retrieveKeyFromStorage();
+		if (key == oldKey) return;
 		localStorage.setItem(keylocation, key);
 		ui.notifications!.notify("Key stored");
 	}
