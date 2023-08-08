@@ -5,7 +5,8 @@ import {ChangeLogger} from './changeLogger.js';
 type EncryptionType = keyof typeof SecuritySettings.ENCRYPTIONTYPES;
 
 export interface EncryptionSettings {
-	useEncryption:keyof  typeof SecuritySettings.ENCRYPTIONTYPES
+	useEncryption:keyof  typeof SecuritySettings.ENCRYPTIONTYPES;
+	keyChangeInProgress: boolean;
 
 }
 
@@ -133,6 +134,10 @@ export class SecuritySettings {
 		}
 	}
 
+	static getEncryptionOptions() : EncryptionSettings {
+		return this.get("encryptionOptions") as EncryptionSettings;
+	}
+
 	static getBoolean(settingName: string) : boolean {
 		const data = this.get(settingName);
 		if (data === true) return true;
@@ -156,6 +161,11 @@ export class SecuritySettings {
 		return this.getEncryptionType() == "full";
 	}
 
+	static keyChangeInProgress() : boolean {
+		const {keyChangeInProgress} = this.get("encryptionOptions") as EncryptionSettings;
+		return keyChangeInProgress ?? false;
+	}
+
 	static isDelayedReload = false;
 	static blockReload = false;
 
@@ -174,6 +184,22 @@ export class SecuritySettings {
 			setTimeout(() => dReload() , 2000);
 		}
 		this.isDelayedReload= true;
+	}
+
+	static async refreshEncryption(newData  ?: EncryptionSettings) {
+		if (!newData)
+			newData = SecuritySettings.getEncryptionOptions();
+		const game = getGame();
+		newData.keyChangeInProgress = true;
+		await game.settings.set(SecuritySettings.SYSTEM_NAME, "encryptionOptions", newData);
+		try {
+			await DataSecurity.changeEncryptionLevel(newData);
+		} catch (e) {
+			console.log(e);
+		}
+		newData.keyChangeInProgress = false;
+		await game.settings.set(SecuritySettings.SYSTEM_NAME, "encryptionOptions", newData);
+
 	}
 
 }
@@ -217,17 +243,13 @@ class EncryptionSubmenu extends FormApplication {
 		DataSecurity.instance.encryptor.updateKey(key);
 
 		delete formData.key;// hide key so its not displayed in the settings
-		const newData = foundry.utils.expandObject(formData);
-		const {useEncryption} = newData;
+		const newData: EncryptionSettings = foundry.utils.expandObject(formData);
 		const oldUse = SecuritySettings.getEncryptionType();
-		game.settings.set(SecuritySettings.SYSTEM_NAME, "encryptionOptions", newData);
+		await game.settings.set(SecuritySettings.SYSTEM_NAME, "encryptionOptions", newData);
 
-		if (useEncryption != oldUse) {
-			await DataSecurity.changeEncryptionLevel(useEncryption);
+		if (newData.useEncryption != oldUse) {
+			await SecuritySettings.refreshEncryption(newData);
 		}
-
-		//@ts-ignore
-
 		// return SettingsConfig.reloadConfirm({world:true});
 	}
 

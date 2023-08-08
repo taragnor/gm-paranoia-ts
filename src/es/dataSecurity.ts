@@ -4,13 +4,12 @@ import {JournalFixUps} from "./JournalFixups.js";
 import {KeyManager} from "./keymanager.js";
 import {SecuritySettings, EncryptionSettings} from "./security-settings.js";
 import {ChangeLogger} from './changeLogger.js';
+import { Encryptor } from "./encryptor.js";
 
-const ENCRYPTSTARTER = "<p>__#ENCRYPTED#__::[v1]</p>";
 const PRE_HOOK_NAME= "encryptionPreEnable";
 const POST_HOOK_NAME = "encryptionEnable";
 
-
-enum SocketCommand{
+enum SocketCommand {
 	ENCRYPT_REQUEST= "ENCRYPT-REQUEST",
 		DECRYPT_REQUEST= "DECRYPT-REQUEST",
 }
@@ -45,27 +44,12 @@ export class DataSecurity {
 		return this._instance;
 	}
 
-	static async changeEncryptionLevel(newSettings:EncryptionSettings ) {
-				if (DataSecurity.instance) {
-					const game = getGame();
-					SecuritySettings.blockReload = true;
-					const msg = localize ("TaragnorSecurity.settings.encryptInProgress");
-					ui.notifications!.notify(msg);
-					if (game.user!.isGM) {
-						ChangeLogger.suspendLogging();
-						await DataSecurity.instance.refreshEncryption();
-						ChangeLogger.resumeLogging();
-					}
-					const msg2 = localize ("TaragnorSecurity.settings.encryptDone");
-					ui.notifications!.notify(msg2);
-					SecuritySettings.blockReload = false;
-				}
-
-
-	}
-
 	static async init() {
 		const game = getGame();
+		if (SecuritySettings.keyChangeInProgress()) {
+			SecuritySettings.refreshEncryption();
+
+		}
 		this.encryptables = new Map();
 		Hooks.on(PRE_HOOK_NAME, (dataSecurity: typeof DataSecurity) => {
 			JournalFixUps.apply(dataSecurity);
@@ -94,6 +78,85 @@ export class DataSecurity {
 		this.encryptables.set(baseClass, fields);
 		this.#applyMainItem(baseClass, fields);
 		this.#applySheets(sheets, fields);
+	}
+
+
+	/** Invoked when a setting is changed and we want to change the global encryption on all data.*/
+	static async changeEncryptionLevel(newSettings:EncryptionSettings ) {
+		if (DataSecurity.instance) {
+			const game = getGame();
+			SecuritySettings.blockReload = true;
+			let msg;
+			switch (newSettings.useEncryption) {
+				case "none":
+					msg = localize ("TaragnorSecurity.settings.decryptInProgress");
+					break;
+				case "gmonly":
+				case "full":
+					msg = localize ("TaragnorSecurity.settings.encryptInProgress");
+					break;
+				default:
+					throw new Error(` Bad setting ${newSettings.useEncryption}`)
+			}
+			ui.notifications!.notify(msg);
+			if (game.user!.isGM) {
+				ChangeLogger.suspendLogging();
+				try {
+					await DataSecurity.instance.refreshEncryption();
+					const msg2 = localize ("TaragnorSecurity.settings.encryptDone");
+					ui.notifications!.notify(msg2);
+				} catch (e) {
+					ui.notifications!.error("Something went wrong, trying emergency Decrypt!");
+					if( await DataSecurity.emergencyDecrypt())
+						ui.notifications!.notify("Emergency Decrypt finished okay");
+					else
+						ui.notifications!.error("Emergency Decrypt fail, data loss possible");
+
+				}
+			}
+			SecuritySettings.blockReload = false;
+			ChangeLogger.resumeLogging();
+		}
+	}
+
+	static async emergencyDecrypt(key?: string, listFail= false) : Promise<boolean>{
+		const encryptables = await DataSecurity.getAllEncryptables();
+		// console.log(`Refreshing Encyrption ${encryptables.length}`);
+		if (key != undefined)
+			this.instance.encryptor.updateKey(key);
+		let fail = 0, success=0;
+		let failList : string[] = [];
+		ChangeLogger.suspendLogging();
+		for (const [obj, field] of encryptables) {
+			//@ts-ignore
+			await obj.reset();
+			const data = DataSecurity.getFieldValue(obj, field);
+			if (!obj.id || !data) {
+				continue;
+			}
+			const shouldBeEncyrpted = DataSecurity.isEncryptableObject(obj);
+			const isEncrypted = DataSecurity.isEncrypted(data);
+			if (isEncrypted) {
+				try {
+					const eData = await DataSecurity.decrypt(obj.id, field);
+					const updateObj : {[k: string] : string} ={};
+					updateObj[field] = eData;
+					// console.log(`Modifying Encryption of ${obj?.name}`);
+					await obj.update(updateObj, {ignoreEncrypt:true});
+					success++;
+
+				} catch (e) {
+					fail++;
+					//@ts-ignore
+					failList.push (`id: ${obj.id}, name: ${obj?.name} . ` );
+				}
+			}
+		}
+		console.log(`Emergency Decrypt ${success} successes, ${fail} failures`);
+		if (listFail)
+			console.log(failList);
+		ChangeLogger.resumeLogging();
+		return fail == 0;
 	}
 
 	static #applyMainItem(baseClass: AnyItem, fields: string[]) {
@@ -438,7 +501,7 @@ export class DataSecurity {
 	}
 
 
-	static async validateKey(potentialKey: string) : Promise<boolean> {
+	static async validateKey(potentialKey: string, debug= true) : Promise<boolean> {
 		const encryptor = new Encryptor(potentialKey);
 		const encryptables = await this.getAllEncryptables();
 		return encryptables.every( ([obj , field]) => {
@@ -450,9 +513,11 @@ export class DataSecurity {
 				return true;
 			}
 			catch (e) {
-				//@ts-ignore
-				console.log(`Object Id: ${obj.id}, Object: ${obj?.name},${field}`);
-				console.log(e);
+				if (debug) {
+					//@ts-ignore
+					console.log(`Object Id: ${obj.id}, Object: ${obj?.name},${field}`);
+					console.log(e);
+				}
 				return false;
 			}
 		});
@@ -537,78 +602,6 @@ export class DataSecurity {
 
 }
 
-class Encryptor {
-
-	#key: string;
-
-	constructor (key: string) {
-		this.#key = key;
-	}
-
-	encrypt (data: string) : string {
-		return ENCRYPTSTARTER + this._encrypt(data);
-	}
-
-	updateKey(key: string) {
-		this.#key = key;
-	}
-
-	private _encrypt(data : string) : string {
-		// console.log("Encryptor called");
-		if (this.#key.length == 0) {
-			const msg = localize("TaragnorSecurity.encryption.error.missingKey");
-			ui.notifications!.error(msg)
-			throw new Error(msg);
-		}
-		const target = "1" + data + "Z"; //add padding for verification
-		let ret = "";
-		for (let i = 0 ; i < target.length; i++) {
-			const keyCode  = this.#key.charCodeAt(i % this.#key.length)!;
-			ret += String.fromCharCode(target.charCodeAt(i) + keyCode);
-		}
-		return ret;
-	}
-
-
-	getEncryptionVersion(data:string) : number {
-		//will be used in the future to decode the data in ECRYPTSTARTER TO GET THE VERSION NUMBER
-		return 1;
-	}
-
-	static isEncrypted (data:string | undefined | null) : boolean {
-		if (!data) return false;
-		return (data.startsWith(ENCRYPTSTARTER));
-	}
-
-	decrypt (data:string | null | undefined) : string {
-		if (data == null) return "";
-		const version = this.getEncryptionVersion(data);
-		switch (version) {
-			case 1:
-				return this._decrypt1(data.substring(ENCRYPTSTARTER.length));
-			default:
-				throw new Error(`Unrecognized Version number: ${version}`);
-		}
-	}
-
-	private _decrypt1 (data: string) : string {
-		// console.log("Decryptor Full called");
-		if (this.#key.length == 0) {
-			const msg = localize("TaragnorSecurity.encryption.error.missingKey");
-			ui.notifications!.error(msg)
-			throw new Error(msg);
-		}
-		let ret = "";
-		for (let i = 0 ; i < data.length; i++) {
-			const keyCode  = this.#key.charCodeAt(i % this.#key.length)!;
-			ret += String.fromCharCode(data.charCodeAt(i) - keyCode);
-		}
-		if (ret.startsWith("1") && ret.endsWith("Z"))
-			return ret.substring(1, ret.length-1);
-		else throw new Error(`Decryption failed: ${data}`);
-	}
-
-}
 
 //Left to allow systems to implement encryption
 //@ts-ignore

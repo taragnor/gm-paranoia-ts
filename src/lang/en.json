@@ -11,11 +11,14 @@
 "TaragnorSecurity.settings.encryptData.2" : "Encrypt Everything",
 
 "TaragnorSecurity.settings.encryptInProgress" : "Encryption in progress, do not reload the page",
-"TaragnorSecurity.settings.encryptDone" : "Encryption Finished",
+"TaragnorSecurity.settings.decryptInProgress" : "Decryption in progress, do not reload the page",
+"TaragnorSecurity.settings.encryptDone" : "Change to Encryption Settings Finished",
 
 "TaragnorSecurity.settings.encryptSubmenu.name" : "Encryption Settings",
 "TaragnorSecurity.settings.encryptSubmenu.hint" : "Opens Encryption Settings",
 "TaragnorSecurity.settings.encryptSubmenu.title" : "Encryption Settings",
+
+
 
 
 "TaragnorSecurity.diceProtection.report.verified0" : "Roll Verified",
