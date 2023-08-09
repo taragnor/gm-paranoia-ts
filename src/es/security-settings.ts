@@ -193,6 +193,7 @@ export class SecuritySettings {
 		newData.keyChangeInProgress = true;
 		await game.settings.set(SecuritySettings.SYSTEM_NAME, "encryptionOptions", newData);
 		try {
+			//TODO: Add a progress bar
 			await DataSecurity.changeEncryptionLevel(newData);
 		} catch (e) {
 			console.log(e);
@@ -230,8 +231,6 @@ class EncryptionSubmenu extends FormApplication {
 	}
 
 	async _updateObject(event: Event, formData: any): Promise<any> {
-		// console.log("Form Data");
-		// console.log(formData);
 		const game = getGame();
 		const {key} = formData;
 		if (!await DataSecurity.validateKey(key)){
@@ -249,8 +248,9 @@ class EncryptionSubmenu extends FormApplication {
 
 		if (newData.useEncryption != oldUse) {
 			await SecuritySettings.refreshEncryption(newData);
+			//@ts-ignore
+			return SettingsConfig.reloadConfirm({world:true});
 		}
-		// return SettingsConfig.reloadConfirm({world:true});
 	}
 
 	override async getData() {

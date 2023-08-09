@@ -1,9 +1,11 @@
 const ENCRYPTSTARTER = "<p>__#ENCRYPTED#__::[v1]</p>";
+const ARBITRARY_SHIFT = 501;
 import { localize } from "./foundry-tools.js";
 
 export class Encryptor {
 
 	#key: string;
+	debug: boolean;
 
 	constructor (key: string) {
 		this.#key = key;
@@ -27,8 +29,9 @@ export class Encryptor {
 		const target = "1" + data + "Z"; //add padding for verification
 		let ret = "";
 		for (let i = 0 ; i < target.length; i++) {
-			const keyCode  = this.#key.charCodeAt(i % this.#key.length)!;
-			ret += String.fromCharCode(target.charCodeAt(i) + keyCode);
+			const keyCode  = this.#key.charCodeAt(i % this.#key.length)! + ARBITRARY_SHIFT;
+			const encoded = String.fromCharCode(target.charCodeAt(i) + keyCode);
+			ret += encoded;
 		}
 		return ret;
 	}
@@ -64,12 +67,22 @@ export class Encryptor {
 		}
 		let ret = "";
 		for (let i = 0 ; i < data.length; i++) {
-			const keyCode  = this.#key.charCodeAt(i % this.#key.length)!;
+			try {
+				const keyCode  = this.#key.charCodeAt(i % this.#key.length)! + ARBITRARY_SHIFT;
 			ret += String.fromCharCode(data.charCodeAt(i) - keyCode);
+			} catch (e) {
+				console.log("error in decrypting block");
+				console.log(e);
+
+			}
 		}
 		if (ret.startsWith("1") && ret.endsWith("Z"))
 			return ret.substring(1, ret.length-1);
-		else throw new Error(`Decryption failed: ${data}`);
+		const retTrim = ret.trim();
+		if (retTrim.startsWith("1") && retTrim.endsWith("Z"))
+			return retTrim.substring(1, ret.length-1);
+
+		else throw new Error(`Decryption failed:\nData:  ${data}\n\n Ret: ${ret}`);
 	}
 
 }

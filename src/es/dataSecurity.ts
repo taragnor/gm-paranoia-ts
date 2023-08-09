@@ -36,6 +36,7 @@ export class DataSecurity {
 
 	encryptor: Encryptor;
 	promises : Map<string, Promise<string>>;
+	static errors: Error[] = [];
 
 	static _instance: DataSecurity;
 	static encryptables: Map<ConstructorOf<DecryptTargetObjects>, string[]>;
@@ -103,6 +104,7 @@ export class DataSecurity {
 				ChangeLogger.suspendLogging();
 				try {
 					await DataSecurity.instance.refreshEncryption();
+					// await DataSecurity.instance.refreshEncryption();
 					const msg2 = localize ("TaragnorSecurity.settings.encryptDone");
 					ui.notifications!.notify(msg2);
 				} catch (e) {
@@ -188,8 +190,7 @@ export class DataSecurity {
 					const decryptedContent = await DataSecurity.decrypt(this.id, field);
 					DataSecurity.setFieldValue(this, field, decryptedContent);
 				} catch (e) {
-					console.log(`Error on ${this.id}: ${this.name}, ${field} `);
-					console.log(e);
+					DataSecurity.errors.push(e);
 				}
 			}
 		}
@@ -290,6 +291,7 @@ export class DataSecurity {
 			return await this.#getDecryptedString( data, targetObjId, targetObjField);
 		} catch (e) {
 			try {
+				this.errors.push(e);
 				ui.notifications!.error("Error on Decryption");
 			} catch (e2) {
 				console.error("Error on Decryption (couldn't use ui");
@@ -505,6 +507,8 @@ export class DataSecurity {
 		const encryptor = new Encryptor(potentialKey);
 		const encryptables = await this.getAllEncryptables();
 		return encryptables.every( ([obj , field]) => {
+			//@ts-ignore
+			obj.reset();
 			const data =  DataSecurity.getFieldValue(obj, field);
 			if (!data || !DataSecurity.isEncrypted(data))
 				return true;
@@ -585,21 +589,37 @@ export class DataSecurity {
 			const shouldBeEncyrpted = DataSecurity.isEncryptableObject(obj);
 			const isEncrypted = DataSecurity.isEncrypted(data);
 			if (shouldBeEncyrpted && !isEncrypted) {
-				const eData = await DataSecurity.encrypt(obj.id, field, data);
-				const updateObj : {[k: string] : string} ={};
-				updateObj[field] = eData;
-				// console.log(`Modifying Encryption of ${obj?.name}`);
-				await obj.update(updateObj, {ignoreEncrypt:true});
+				// const eData = await DataSecurity.encrypt(obj.id, field, data);
+				const value = DataSecurity.getFieldValue(obj, field);
+				if (typeof value == "string") {
+					const eData =  DataSecurity.instance.encryptor.encrypt(value);
+					const updateObj : {[k: string] : string} ={};
+					updateObj[field] = eData;
+					await obj.update(updateObj, {ignoreEncrypt:true});
+				}
 			}  else if (!shouldBeEncyrpted && isEncrypted) {
-				const eData = await DataSecurity.decrypt(obj.id, field);
+				// const eData = await DataSecurity.decrypt(obj.id, field);
+				const eData = DataSecurity.instance.encryptor.decrypt(DataSecurity.getFieldValue(obj, field) ?? "");
 				const updateObj : {[k: string] : string} ={};
 				updateObj[field] = eData;
-				// console.log(`Modifying Encryption of ${obj?.name}`);
 				await obj.update(updateObj, {ignoreEncrypt:true});
 			}
 		}
 	}
 
+	static encryptTest(key:string, str: string) {
+		const crypt = new Encryptor(key);
+		const crypted = crypt.encrypt(str);
+		const decrypted = crypt.decrypt(crypted);
+		if (decrypted != str)
+			throw new Error(`Mismatch ${str} and ${decrypted}`);
+		return crypted;
+	}
+
+	static decryptTest(key:string, str: string) {
+		const crypt = new Encryptor(key);
+		return crypt.decrypt(str);
+	}
 }
 
 
