@@ -176,21 +176,28 @@ export class DiceSecurity {
 	}
 
 	static replaceRoll(roll:Roll, rollData: Roll) {
-		for (let i = 0; i < rollData.terms.length; i++) {
-			const term = rollData.terms[i];
-			if ("results" in term) //check for 0 dice rolls
-				for (let j = 0; j< term.results.length; j++) {
-					const term2 = roll.terms[j]
-					if ("results" in term2) //check for 0 dice rolls
-						term2.results[j] = term.results[j];
-				}
-		}
-		//@ts-ignore
-		roll._total = rollData.total;
-		//@ts-ignore
-		roll._evaluated = true;
-		return roll;
-	}
+		// roll.terms = rollData.terms;
+		roll.terms = rollData.terms
+			.map( (term2, i)=> "results" in term2 ? term2 : roll.terms[i]
+			);
+		Debug(roll.terms);
+		Debug(rollData.terms);
+		// for (let i = 0; i < rollData.terms.length; i++) {
+		// 	const term = rollData.terms[i];
+		// if ("results" in term) //check for 0 dice rolls
+		// 	roll.terms[i] == rollData.terms[i];
+		// for (let j = 0; j< term.results.length; j++) {
+		// 	const term2 = roll.terms[j]
+		// 	if ("results" in term2) //check for 0 dice rolls
+		// 		term2.results[j] = term.results[j];
+		// }
+	// }
+	//@ts-ignore
+	roll._total = rollData.total;
+	//@ts-ignore
+	roll._evaluated = true;
+	return roll;
+}
 
 	static socketSend(data: RollSendData) {
 		Sockets.send(data.command, data);

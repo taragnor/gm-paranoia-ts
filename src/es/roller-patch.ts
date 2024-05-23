@@ -52,7 +52,7 @@ export function applyPatch() {
 	Roll.prototype.toAnchor = function (...args: unknown[]): HTMLElement {
 		if (!anchoredRolls.rolls.includes(this)) {
 			anchoredRolls.rolls.push(this);
-			Debug(this);
+			// Debug(this);
 		}
 		return _oldtoAnchor.apply(this,args);
 	}

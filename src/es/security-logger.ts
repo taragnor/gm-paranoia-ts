@@ -87,10 +87,24 @@ export class SecurityLogger {
 	}
 
 	verifyRolls( rolls: RollType[], timestamp: number, player_id: string, chatlog_id: string) : statusType {
+		const rollPairs = rolls.map( r=> [r, this.checkBasicFind(r)]) as [RollType, LogObj | null][];
+
 		const statusNum = rolls
 			.map( r => this.verifyRoll(r, timestamp, player_id, chatlog_id))
 			.map ( st=> SecurityLogger.numberizeStatus(st))
 			.reduce( (acc, status) => Math.min(acc, status), 10)
+		if (statusNum < SecurityLogger.numberizeStatus("unused_rolls")) {
+			return SecurityLogger.unnumberizeStatus(statusNum);
+		}
+		const recentLogs = this.logs.filter( x=>
+			x.player_id == player_id
+			&& timestamp - x.timestamp < SecurityLogger.recentCounter
+			&& timestamp != x.timestamp
+		);
+		if (recentLogs.filter( x=> !x.used).length > 1) {
+			return "unused_rolls";
+		}
+
 		return SecurityLogger.unnumberizeStatus(statusNum);
 	}
 
@@ -156,11 +170,11 @@ export class SecurityLogger {
 			exists.used = chatlog_id;
 			return exists.status;
 		}
-		if (recentLogs.filter( x=> !x.used).length > 1) {
-			exists.status = "unused_rolls";
-			exists.used = chatlog_id;
-			return exists.status;
-		}
+		// if (recentLogs.filter( x=> !x.used).length > 1) {
+		// 	exists.status = "unused_rolls";
+		// 	exists.used = chatlog_id;
+		// 	return exists.status;
+		// }
 		if (SecurityLogger.checkStaleRoll(exists.roll, timestamp)) {
 			exists.status = "stale";
 			exists.used = chatlog_id;
@@ -173,6 +187,8 @@ export class SecurityLogger {
 
 	static rollsIdentical(rollA: RollType, rollB: RollType) {
 		try {
+			console.log(rollA);
+			console.log(rollB);
 			if (rollA.total != rollB.total)
 				return false;
 			return rollA.terms.every( (term: RollTerm, i) => {
