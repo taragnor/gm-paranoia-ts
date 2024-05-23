@@ -179,9 +179,11 @@ export class DiceSecurity {
 		for (let i = 0; i < rollData.terms.length; i++) {
 			const term = rollData.terms[i];
 			if ("results" in term) //check for 0 dice rolls
-				for (let j = 0; j< term.results.length; j++)
-					if (term.results) //check for 0 dice rolls
-						term.results[j] = term.results[j];
+				for (let j = 0; j< term.results.length; j++) {
+					const term2 = roll.terms[j]
+					if ("results" in term2) //check for 0 dice rolls
+						term2.results[j] = term.results[j];
+				}
 		}
 		//@ts-ignore
 		roll._total = rollData.total;
