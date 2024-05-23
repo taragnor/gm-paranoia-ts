@@ -22,3 +22,7 @@ Synchronous rolls such as inline rolls using double brackets in chat, aren't abl
 
 This system has not been tested for multiple GMs. 
 
+# Journal Encryption (experimental) #
+The module can now encrypt your journal entries using an encryption key you pick (similar to a password). Players that aren't allowed access to that journal entry (such as those using the console to try to steal your secrets), will recieve only an "access denied" message or a bunch of giberrish if they try to read your secrets. 
+
+WARNING: this feature is experimental, and could cause you to lose your data, MAKE SURE TO BACKUP YOUR DATA BEFORE TURNING IT ON!
