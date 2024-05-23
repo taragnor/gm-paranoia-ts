@@ -101,8 +101,6 @@ export class SecurityLogger {
 			&& timestamp - x.timestamp < SecurityLogger.recentCounter
 			&& timestamp != x.timestamp
 		);
-		debugger;
-		Debug(recentLogs);
 		if (recentLogs.filter( x=> !x.used).length >= 1) {
 			return "unused_rolls";
 		}
