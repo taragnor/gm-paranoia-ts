@@ -9,6 +9,15 @@ import { Encryptor } from "./encryptor.js";
 const PRE_HOOK_NAME= "encryptionPreEnable";
 const POST_HOOK_NAME = "encryptionEnable";
 
+declare global {
+	interface HOOKS {
+	 "encryptionPreEnable": (dataSecurity: typeof DataSecurity) => unknown;
+ "encryptionEnable" : (dataSecurity: typeof DataSecurity) => unknown;
+	}
+
+
+}
+
 enum SocketCommand {
 	ENCRYPT_REQUEST= "ENCRYPT-REQUEST",
 		DECRYPT_REQUEST= "DECRYPT-REQUEST",
@@ -28,8 +37,10 @@ interface EncryptRequestObj {
 type DecryptTargetObjects = Actor | Item | JournalEntryPage;
 
 
-type AnyItem = ConstructorOf<Item | Actor | JournalEntryPage>;
-type SheetType = ConstructorOf<DocumentSheet>
+type AnyItem = typeof Item | typeof Actor | typeof JournalEntryPage;
+type SheetType = typeof JournalEntryPage;
+
+type ConstructorOf<T extends {constructor: Object}> = T["constructor"];
 
 
 export class DataSecurity {
@@ -56,7 +67,7 @@ export class DataSecurity {
 			JournalFixUps.apply(dataSecurity);
 		});
 		try {
-			await Hooks.callAll(PRE_HOOK_NAME, this);
+			Hooks.callAll(PRE_HOOK_NAME, this);
 		}
 		catch (e) {
 			ui.notifications!.error("Error running hooks on encryptionPreEnable");
@@ -67,7 +78,7 @@ export class DataSecurity {
 			this._instance = new DataSecurity(key);
 		}
 		console.log("Data Security initialized");
-		await Hooks.callAll(POST_HOOK_NAME, this);
+		Hooks.callAll(POST_HOOK_NAME, this);
 	}
 
 	/** instructs DatjaSecurity to encrypt the data field on the given data item class and any relevant sheets that use it
@@ -183,6 +194,7 @@ export class DataSecurity {
 				}
 				return oldUpdate.apply(this, arguments);
 			}
+		//@ts-ignore
 		baseClass.prototype.decryptData = async function () {
 			for (const field of fields) {
 				try {
@@ -198,13 +210,16 @@ export class DataSecurity {
 
 	static #applySheets(sheets: SheetType[], fields:string[]) {
 		for (let sheet of sheets) {
+			//@ts-ignore
 			const oldgetData = sheet.prototype.getData;
+			//@ts-ignore
 			sheet.prototype.getData =
 				async function (this: InstanceType<typeof sheet>, options= {}) {
-					if ("decryptData" in (this.object as object))
+					if ("object" in  this && "decryptData" in (this.object as object))
 						await (this.object as any).decryptData();
 					const data = await oldgetData.call(this, options);
 					for (const field of fields) {
+						//@ts-ignore
 						const item = this.document;
 						if (!item)
 							throw new Error("Couldn't find item on sheet.name");
@@ -327,7 +342,7 @@ export class DataSecurity {
 		const game = getGame();
 		if (!SecuritySettings.encryptAll()) { //check for player ownership here
 			const players = game.users!.filter (x=> !x.isGM);
-			const tester : Actor | Item | JournalEntry = obj instanceof JournalEntryPage ? obj.parent : obj;
+			const tester : Actor<any> | Item<any> | JournalEntry = obj instanceof JournalEntryPage ? obj.parent : obj;
 			if (players.some( plyr => tester.testUserPermission(plyr, "OBSERVER", {exact:false})))
 				return false; //don't encrypt if players can see it
 		}
@@ -344,7 +359,7 @@ export class DataSecurity {
 
 	static async findData(targetObjId: string, targetObjField: string): Promise<[DecryptTargetObjects, string | undefined | null]> {
 		const game = getGame();
-		const obj = game.journal!
+		const obj = game.journal!.contents
 		.map( //@ts-ignore
 			x=> x.pages.contents)
 		.flat(1)
@@ -357,7 +372,7 @@ export class DataSecurity {
 		.find (
 			actor => {
 				const items = actor.items;
-				return items
+				return items.contents
 					.some( i => i.id == targetObjId);
 			})
 		?.items.find( i => i.id ==targetObjId)
@@ -370,7 +385,7 @@ export class DataSecurity {
 		return [obj, fieldValue];
 	}
 
-	static _findData_tokenScan ( targetObjId: string) : Actor | Item | undefined {
+	static _findData_tokenScan ( targetObjId: string) : Actor<any> | Item<any> | undefined {
 		const game = getGame();
 		const tokenActors = game.scenes!.contents
 		.flatMap(
@@ -383,19 +398,20 @@ export class DataSecurity {
 	}
 
 
-	static async _findData_compendiumScan (targetObjId: string) : Promise< Actor | Item | undefined> {
+	static async _findData_compendiumScan (targetObjId: string) : Promise< Actor<any> | Item<any> | undefined> {
 		const game = getGame();
 		for (const pack of game.packs) {
 			switch ( pack.documentName ) {
 				case "Actor": {
 					const query = {};
-					const packActors : Actor[] = await pack.getDocuments(query);
-					const retobj : Actor | Item | undefined = packActors
-						.find( (x: Actor)=> x.id == targetObjId)
-						?? pack.
-						find( (x: Actor)=> x.items
-							.some(i=> i.id == targetObjId)
-						)?.items.find((i: Item) => i.id == targetObjId);
+					const packActors : Actor<any>[] = await pack.getDocuments(query);
+					const retobj : Actor<any> | Item<any> | undefined = packActors
+					.find( (x: Actor)=> x.id == targetObjId)
+					?? pack
+					.find( (x: Actor)=> x.items
+						.contents
+						.some(i=> i.id == targetObjId)
+					)?.items.find((i: Item) => i.id == targetObjId);
 					if (retobj) return retobj;
 					continue;
 				}
@@ -448,7 +464,7 @@ export class DataSecurity {
 		.entries();
 		const tokenActors = game.scenes!.contents
 		.flatMap( sc => sc.tokens.contents.map( tok => tok.actor))
-		.filter( x=> x) as StoredDocument<Actor>[] ;
+		.filter( x=> x) as Actor[] ;
 		const actors : Actor[] = game.actors!.contents.map(x=>x).concat(tokenActors);
 		let xArr = [];
 		for (const o of x) {
@@ -461,9 +477,9 @@ export class DataSecurity {
 				return ret;
 			}
 			else if ((cls as any).collectionName == "items") {
-				const x= game.items!.map(x=>x) as Item[];
+				const x= game.items!.contents.map(x=>x) as Item[];
 				const items = actors.map(x=> {
-					const items=  x.items.map(x=>x);
+					const items=  x.items.contents.map(x=>x);
 					return items;
 				}).flat(1);
 				const combined =  x.concat(items);

@@ -76,7 +76,7 @@ export class KeyManager {
 					enter:  {
 						icon: `<i class="fas fa-check"></i>`,
 						label: "Confirm",
-						callback: (html) => {
+						callback: (html: JQuery) => {
 							const key = $(html).find(".key-entry").val();
 							if (typeof key == "string")
 								resolve (key);
@@ -88,7 +88,7 @@ export class KeyManager {
 				close: function () {
 					resolve(null);
 				},
-			});
+			}, {});
 			dialog.render(true);
 		});
 	}

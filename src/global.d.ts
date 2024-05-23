@@ -42,10 +42,6 @@ interface EvaluationOptions {
 	_securityId: number,
 }
 
-interface RollTerm {
-	results: {active: boolean, result: number} []
-}
-
 type RollType = SecureRoll<Roll>;
 
 type SecureRoll<T> = T & {options: {

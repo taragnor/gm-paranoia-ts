@@ -180,7 +180,8 @@ export class SecurityLogger {
 					return true;
 				// if (!term?.results) return true;
 				return term.results.every( (result: {result: number, active: boolean}, j: number) => {
-					return result.result == rollB.terms[i].results[j].result;
+					//@ts-ignore
+					return result?.result == rollB?.terms[i]?.results[j].result;
 				})
 			});
 		} catch (e) {

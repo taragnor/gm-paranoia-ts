@@ -65,7 +65,7 @@ export class Sockets {
 
 	private static _send(command: string, data:any, targetList ?: string[], expectReply: boolean = false, count: number = this.count) {
 		const game = getGame();
-		const targets = targetList ?? getGame().users!.map( x=> x.id);
+		const targets = targetList ?? getGame().users!.contents.map( x=> x.id);
 		const payload: SocketPayload = {
 			command,
 			data,

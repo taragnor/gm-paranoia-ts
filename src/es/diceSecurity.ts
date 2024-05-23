@@ -176,11 +176,13 @@ export class DiceSecurity {
 	}
 
 	static replaceRoll(roll:Roll, rollData: Roll) {
-		for (let i = 0; i < rollData.terms.length; i++)
-			if (rollData.terms[i].results) //check for 0 dice rolls
-				for (let j = 0; j< rollData.terms[i].results.length; j++)
-					if (rollData.terms[i].results) //check for 0 dice rolls
-						roll.terms[i].results[j] = rollData.terms[i].results[j];
+		for (let i = 0; i < rollData.terms.length; i++) {
+			const term = rollData.terms[i];
+			if ("results" in term) //check for 0 dice rolls
+				for (let j = 0; j< term.results.length; j++)
+					if (term.results) //check for 0 dice rolls
+						term.results[j] = term.results[j];
+		}
 		//@ts-ignore
 		roll._total = rollData.total;
 		//@ts-ignore
@@ -407,8 +409,8 @@ export class DiceSecurity {
 
 	static getResultsArray(roll: Roll): number[] {
 			return roll.terms
-				.filter( term => !term.isDeterministic)
-				.map ( term => {
+				.filter( term => !term.isDeterministic && "results" in term)
+				.map ( (term : Die) => {
 				return term.results.map( result=> result.result);
 			}).flat();
 	}
@@ -518,7 +520,7 @@ export class DiceSecurity {
 
 	static async _displayRoll(roll : Roll) {
 		//DEBUG FUNCTION
-		const map = roll.terms.map( x=> x.results.map(y=> y.result));
+		const map = roll.terms.flatMap( x=> "results" in x? x.results.map(y=> y.result): []);
 		console.log(`original terms: ${map} `);
 		console.log(`original total: ${roll.total}`);
 	}

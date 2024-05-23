@@ -24,7 +24,7 @@ export class ChangelogDialog extends Dialog {
 				},
 			},
 			default: "close",
-		});
+		}, {});
 	}
 
 	static create() {

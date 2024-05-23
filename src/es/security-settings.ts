@@ -32,6 +32,7 @@ export class SecuritySettings {
 			hint: "",
 			scope: "world",
 			default: {
+				//@ts-ignore
 				useEncryption: "none"
 			},
 			config: false,
@@ -230,7 +231,7 @@ class EncryptionSubmenu extends FormApplication {
 		});
 	}
 
-	async _updateObject(event: Event, formData: any): Promise<any> {
+	async _updateObject(_event: Event, formData: any): Promise<any> {
 		const game = getGame();
 		const {key} = formData;
 		if (!await DataSecurity.validateKey(key)){
@@ -242,7 +243,7 @@ class EncryptionSubmenu extends FormApplication {
 		DataSecurity.instance.encryptor.updateKey(key);
 
 		delete formData.key;// hide key so its not displayed in the settings
-		const newData: EncryptionSettings = foundry.utils.expandObject(formData);
+		const newData: EncryptionSettings = foundry.utils.expandObject(formData) as EncryptionSettings;
 		const oldUse = SecuritySettings.getEncryptionType();
 		await game.settings.set(SecuritySettings.SYSTEM_NAME, "encryptionOptions", newData);
 

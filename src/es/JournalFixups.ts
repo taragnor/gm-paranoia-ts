@@ -5,6 +5,7 @@ import {Debug} from "./debug.js";
 export class JournalFixUps {
 
 	static apply(dataSecurity: typeof DataSecurity) {
+		//@ts-ignore
 		DataSecurity.setEncryptable( JournalEntryPage, [JournalTextPageSheet], ["text.content"]);
 	}
 
