@@ -336,42 +336,42 @@ export class DiceSecurity {
 
 
 	static async secureRoll (rollOrRollString: Roll | string): Promise<
-	{
-		roll: Roll,
-		gm_timestamp: number,
-		log_id: number
-	}> {
-		const game = getGame();
-		let unevaluatedRoll : Roll;
-		if (typeof rollOrRollString == "string") {
-			//convert string roll to real roll
-			unevaluatedRoll = new Roll(rollOrRollString);
-		} else {
-			unevaluatedRoll = rollOrRollString;
-		}
-		if (game.user!.isGM)  {
-			return {
-				roll: await unevaluatedRoll.evaluate({async: true}),
-				gm_timestamp: Date.now(),
-				log_id: -1,
-			};
-		}
-		return await new Promise(( conf, rej) => {
-			const timestamp = this.logger.getTimeStamp();
-			this.logger.awaitedRolls.push( {
-				playerId: game.user!.id,
-				expr: unevaluatedRoll.formula,
-				timestamp,
-				resolve: conf,
-				reject: rej,
+		{
+			roll: Roll,
+			gm_timestamp: number,
+			log_id: number
+		}> {
+			const game = getGame();
+			let unevaluatedRoll : Roll;
+			if (typeof rollOrRollString == "string") {
+				//convert string roll to real roll
+				unevaluatedRoll = new Roll(rollOrRollString);
+			} else {
+				unevaluatedRoll = rollOrRollString;
+			}
+			if (game.user.isGM)  {
+				return {
+					roll: await unevaluatedRoll.evaluate({async: true}),
+					gm_timestamp: Date.now(),
+					log_id: -1,
+				};
+			}
+			return await new Promise(( conf, rej) => {
+				const timestamp = this.logger.getTimeStamp();
+				this.logger.awaitedRolls.push( {
+					playerId: game.user!.id,
+					expr: unevaluatedRoll.formula,
+					timestamp,
+					resolve: conf,
+					reject: rej,
+				});
+				const GMId = game.users!.find( x=> x.isGM)?.id;
+				if (!GMId) {rej(new Error("No GM in game")); return;}
+				const json = JSON.stringify(unevaluatedRoll.toJSON());
+				this.rollRequest(json, timestamp, GMId);
+				// this.rollRequest(unevaluatedRoll.formula, timestamp, GMId);
 			});
-			const GMId = game.users!.find( x=> x.isGM)?.id;
-			if (!GMId) {rej(new Error("No GM in game")); return;}
-			const json = JSON.stringify(unevaluatedRoll.toJSON());
-			this.rollRequest(json, timestamp, GMId);
-			// this.rollRequest(unevaluatedRoll.formula, timestamp, GMId);
-		});
-	}
+		}
 
 
 	static replaceRollProtoFunctions() {

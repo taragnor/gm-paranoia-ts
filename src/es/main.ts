@@ -1,4 +1,4 @@
-import { } from "./roller-patch.js";
+import {applyPatch} from "./roller-patch.js";
 import {DiceSecurity} from "./diceSecurity.js";
 import { ChangeLogger } from "./changeLogger.js";
 import {SecuritySettings} from "./security-settings.js";
@@ -12,6 +12,7 @@ Hooks.on("ready",  () => {
 	//DEBUG
 	//@ts-ignore
 	window.ChangelogDialog = ChangelogDialog;
+	applyPatch();
 	Sockets.init("gm-paranoia-taragnor");
 	SecurityHandlebarsStuff.init();
 	SecuritySettings.init();
