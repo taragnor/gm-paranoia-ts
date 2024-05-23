@@ -87,7 +87,7 @@ export class SecurityLogger {
 	}
 
 	verifyRolls( rolls: RollType[], timestamp: number, player_id: string, chatlog_id: string) : statusType {
-		const rollPairs = rolls.map( r=> [r, this.checkBasicFind(r)]) as [RollType, LogObj | null][];
+		// const rollPairs = rolls.map( r=> [r, this.checkBasicFind(r)]) as [RollType, LogObj | null][];
 
 		const statusNum = rolls
 			.map( r => this.verifyRoll(r, timestamp, player_id, chatlog_id))
@@ -101,7 +101,9 @@ export class SecurityLogger {
 			&& timestamp - x.timestamp < SecurityLogger.recentCounter
 			&& timestamp != x.timestamp
 		);
-		if (recentLogs.filter( x=> !x.used).length > 1) {
+		debugger;
+		Debug(recentLogs);
+		if (recentLogs.filter( x=> !x.used).length >= 1) {
 			return "unused_rolls";
 		}
 
