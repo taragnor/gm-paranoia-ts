@@ -21,7 +21,7 @@
 
 
 
-"TaragnorSecurity.diceProtection.report.verified0" : "Roll Verified",
+"TaragnorSecurity.diceProtection.report.verified0" : "{numRolls} Rolls Verified",
 "TaragnorSecurity.diceProtection.report.verified1" : "No Cheating",
 "TaragnorSecurity.diceProtection.report.cheater" : "is a cheater",
 "TaragnorSecurity.diceProtection.report.sus" : "is Suspicious",

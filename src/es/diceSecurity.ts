@@ -446,7 +446,7 @@ export class DiceSecurity {
 				this.susMessage(html, msg, chatmessage);
 				break;
 			case "verified":
-				this.verifyMessage(html, msg, chatmessage);
+				this.verifyMessage(html, msg, chatmessage, rolls.length);
 				break;
 			case "roll_modified":
 				this.cheaterMessage(html, msg, chatmessage);
@@ -487,9 +487,9 @@ export class DiceSecurity {
 		this.dispatchCheaterMsg(chatmessage.user!.id!, "cheater", rollId);
 	}
 
-	static verifyMessage(html: JQuery<HTMLElement>, _reason: string, _chatmessage: ChatMessage) {
+	static verifyMessage(html: JQuery<HTMLElement>, _reason: string, _chatmessage: ChatMessage, numberOfRolls:number) {
 		const insert_target = html.find(".message-header");
-		const message = localize ('TaragnorSecurity.diceProtection.report.verified0') ;
+		const message = game.i18n.format ('TaragnorSecurity.diceProtection.report.verified0', {numRolls: String(numberOfRolls)}) ;
 		const insert = $(`<div class="roll-verified security-msg"> ${message} </div>`);
 		this.startTextAnimation(insert);
 		html.addClass("roll-verified");
